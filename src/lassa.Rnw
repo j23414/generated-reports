@@ -1,0 +1,110 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Lassa survey}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+
+<<message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(magrittr)
+@
+
+<<fig.width=8, fig.height=4>>=
+# Download and decompress file
+if (!file.exists("lassa/metadata.tsv")) {
+  url <- "https://data.nextstrain.org/files/workflows/lassa/metadata.tsv.zst"
+  system("mkdir lassa")
+  system(paste("curl -L", url, "-o lassa/metadata.tsv.zst"))
+  system("zstd -d lassa/metadata.tsv.zst -o lassa/metadata.tsv")
+}
+
+data <- readr::read_delim("lassa/metadata.tsv", delim="\t")
+
+cdata <- data %>%
+  subset(., !is.na(date)) %>%
+  subset(., date !="XXXX-XX-XX") %>%
+  mutate(
+    date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+    col_year = substr(date, 1, 4),
+    col_mon = substr(date, 6,7),
+    col_day = substr(date, 9,10)
+  )
+
+summarize_group <- function(data, serotype="DENV1", MinYear=2000) {
+  data %>%
+  subset(., col_year > MinYear) %>%
+  select(., c("accession", "country", "col_year", "date_adjusted")) %>%
+  group_by(, ColDate) %>%
+  summarise(
+    n=n()
+  ) %>%
+  ungroup(.)
+}
+              
+cdata %>% 
+  ggplot(., aes(x=col_year, fill=country)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Lassa entries with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  )
+@
+
+<<fig.width=8, fig.height=4>>=
+max_length <- max(data$length)
+binwidth <- 100
+
+data %>%
+  ggplot(aes(x = length)) +
+  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+  theme_bw() +
+  scale_x_continuous(
+    breaks = c(seq(0, max_length, by = 1000), max_length),
+    limits = c(0, max_length + 1)
+  ) +
+  labs(
+    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+    y = "Count",
+    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+  )
+@
+
+
+
+
+\end{document}
