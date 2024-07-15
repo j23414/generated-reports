@@ -1,0 +1,186 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Dengue Surveillance (last update: \today)}
+\rhead{FredHutch: Bedford Lab}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+<<message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(magrittr)
+@
+
+<<fig.width=8, fig.height=2>>=
+# clean dataset
+data <- readxl::read_excel("../results/reordered_metadata.tsv.xlsx")
+
+cdata <- data %>%
+  subset(., ColYear!="XXXX") %>%
+  mutate(
+    ColMon = dplyr::case_when( ColMon == "XX" ~ "01",
+                               ColMon == "XXX" ~ "01",
+                               TRUE ~ ColMon),
+    ColDate = paste(ColYear,"-",ColMon, sep=""),
+    Q = dplyr::case_when( ColMon < "04" ~ "Q1",
+                          ColMon < "07" ~ "Q2",
+                          ColMon < "10" ~ "Q3",
+                          TRUE ~ "Q4"),
+    Quarter= paste("FY",ColYear, Q, sep=""),
+    Serotype = gsub("/.*","", nextclade_genotype),
+    Ctry = gsub(":.*", "", Country),
+  )
+
+clade_palette <- c("DENV1/I"="#0c2c84","DENV1/II"="#225ea8","DENV1/III"="#1d91c0","DENV1/IV"="#41b6c4","DENV1/V"="#7fcdbb",
+                  "DENV2/AA"="#005a32","DENV2/AI"="#238443","DENV2/AII"="#41ab5d","DENV2/AM"="#78c679","DENV2/C"="#addd8e","DENV2/S"="#d9f0a3",
+                  "DENV3/I"="#ec7014","DENV3/II"="#fe9929","DENV3/III"="#fec44f","DENV3/IV"="#fee391",
+                  "DENV4/I"="#ae017e","DENV4/II"="#f768a1","DENV4/S"="#fa9fb5")
+
+summarize_genotype <- function(data, serotype="DENV1", MinYear=2020) {
+  data %>%
+  subset(., Serotype == serotype) %>%
+  subset(., ColYear > MinYear) %>%
+  select(., c("GenBank", "Serotype", "nextclade_genotype", "ColDate")) %>%
+  group_by(Serotype,nextclade_genotype, ColDate) %>%
+  summarise(
+    n=n()
+  ) %>%
+  ungroup(.)
+}
+
+denv1 <- summarize_genotype(cdata, serotype="DENV1", MinYear=2019)
+denv2 <- summarize_genotype(cdata, serotype="DENV2", MinYear=2019)
+denv3 <- summarize_genotype(cdata, serotype="DENV3", MinYear=2019)
+denv4 <- summarize_genotype(cdata, serotype="DENV4", MinYear=2019)
+all <- rbind(denv1, denv2,denv3,denv4)
+
+library(cowplot)
+plot_summary <- function(data, title="DENV1", margin_l=0.5){
+  a <- data %>%
+  ggplot(., aes(x=ColDate, y=n, fill=nextclade_genotype)) +
+  geom_bar(stat="identity", position="stack") +
+  ggplot2::scale_fill_manual(values = clade_palette) +
+  theme_bw() + 
+  theme(axis.text.x = element_blank(),
+        axis.title.x=element_blank(), axis.title.y=element_blank(),
+        legend.position = "none",
+        plot.margin = margin(l=margin_l,r=0.23,unit="cm"))+
+  labs(title=title)
+  
+  b <- data %>%
+  ggplot(., aes(x=ColDate, y=n, fill=nextclade_genotype)) +
+  geom_bar(stat="identity", position="fill") +
+  ggplot2::scale_fill_manual(values = clade_palette) +
+  ggplot2::scale_y_continuous(labels = scales::percent) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle=90, vjust=1, hjust=1, size=6), 
+        axis.title.x=element_blank(), axis.title.y=element_blank(),
+        legend.position = "bottom", legend.title = element_blank())
+  
+  cowplot::plot_grid(a, b,ncol=1, rel_heights = c(5,7))
+}
+@
+
+<<fig.width=8, fig.height=4.7>>=
+cdata %>%
+  subset(., Serotype != "-") %>%
+  #subset(., ColYear > 2019) %>%
+  ggplot(., aes(x=ColYear, fill=nextclade_genotype)) + 
+  geom_bar() +
+  ggplot2::scale_fill_manual(values = clade_palette) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle=90, vjust=1, hjust=1, size=6 ),
+        legend.title = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())+
+  facet_wrap(~Serotype, ncol=1, scales = "free_y")
+
+temp <- cdata %>%
+  subset(., nextclade_genotype != "-") %>%
+  #subset(., ColYear > 2019) %>%
+  select(., c("GenBank", "Serotype", "nextclade_genotype", "ColYear")) %>%
+  group_by(Serotype,nextclade_genotype, ColYear) %>%
+  summarise(
+    n=n()
+  )
+
+temp %>%
+  ggplot(., aes(x=ColYear, y=n, fill=nextclade_genotype)) +
+  geom_bar(stat="identity", position="fill") +
+  ggplot2::scale_fill_manual(values = clade_palette) +
+  ggplot2::scale_y_continuous(labels = scales::percent) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle=90, vjust=1, hjust=1, size=6 ),
+        legend.title = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())+
+  facet_wrap(~Serotype, ncol=1, scales = "free_y")
+@
+
+<<fig.width=7.5, fig.height=4>>=
+n=sum(all$n)
+plot_summary(all, title=paste("Dengue all (n = ",n,")", sep=""))
+@
+
+\includegraphics[width=\textwidth]{imgs/dengue_all.png}
+
+<<fig.width=7.5, fig.height=4>>=
+n=sum(denv1$n)
+plot_summary(denv1, title=paste("DENV1 (n = ",n,")", sep=""), margin_l=0.5)
+@
+
+\includegraphics[width=\textwidth]{imgs/dengue_denv1.png}
+
+<<fig.width=7.5, fig.height=4>>=
+n=sum(denv2$n)
+plot_summary(denv2, title=paste("DENV2 (n = ",n,")", sep=""), margin_l=0.65)
+@
+
+\includegraphics[width=\textwidth]{imgs/dengue_denv2.png}
+
+<<fig.width=7.5, fig.height=4>>=
+n=sum(denv3$n)
+plot_summary(denv3, title=paste("DENV3 (n = ",n,")", sep=""), margin_l=0.65)
+@
+
+\includegraphics[width=\textwidth]{imgs/dengue_denv3.png}
+
+<<fig.width=7.5, fig.height=4>>=
+n=sum(denv4$n)
+plot_summary(denv4, title=paste("DENV4 (n = ",n,")", sep=""), margin_l=0.65)
+@
+
+\includegraphics[width=\textwidth]{imgs/dengue_denv4.png}
+
+\section*{Methods: Data Processing}
+
+\includegraphics[width=\textwidth]{imgs/pipeline.png}
+
+
+\end{document}
