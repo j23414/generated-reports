@@ -1,0 +1,6 @@
+src/*.pdf
+.Rhistory
+*.tex
+*.log
+*.gz
+src/*/
