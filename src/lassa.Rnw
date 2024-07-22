@@ -104,6 +104,46 @@ data %>%
   )
 @
 
+\newpage
+
+\section*{Lassa strain name}
+
+Is setting the strain name helpful for lassa? It looks like a majority of the strain names are the GenBank accession anyways.
+
+<<fig.width=8, fig.height=4, echo=TRUE>>=
+nrow(data)
+
+strainset=data %>%
+  subset(strain != accession) %>%
+  nrow(.)
+
+cdata %>% 
+  ggplot(., aes(x=col_year, fill=strain != accession)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Lassa entries with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  ) +
+  scale_fill_manual(values = c("TRUE" = "#619CFF", "FALSE" = "#F8766D"),
+                    labels = c("TRUE" = "Has strain name", "FALSE" = "Uses accession"))
+@
+
+\begin{itemize}
+\item Total lassa records = \Sexpr{nrow(data)}. Notice how this includes samples that lack a collection date.
+\item Total lassa records where strain does not equal accession = \Sexpr{strainset}
+\item Percentage with strain names \Sexpr{sprintf("%.2f", (strainset/nrow(data)) * 100)}\%
+\item Including a strain name seems more likely with recent samples
+\end{itemize}
+
+
+
+
 
 
 
