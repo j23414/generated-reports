@@ -38,6 +38,33 @@ library(tidyverse)
 library(magrittr)
 @
 
+
+\section*{Background}
+
+Lassa has two segments "L" and "S" from Chapter 16 of "Molecular Virology of Human Pathogenic Viruses" by Wang-Shick Ryu
+
+<<fig.width=8, fig.height=4>>=
+# Download and decompress file
+if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg")) {
+  url <- "https://ars.els-cdn.com/content/image/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg"
+  system("mkdir -p lassa")
+  system(paste("curl -L", url, "-o lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg"))
+}
+if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg")) {
+  url <- "https://ars.els-cdn.com/content/image/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg"
+  system("mkdir -p lassa")
+  system(paste("curl -L", url, "-o lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg"))
+}
+@
+
+\includegraphics[width=0.8\textwidth]{lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg}
+
+\includegraphics[width=0.8\textwidth]{lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg}
+
+\newpage
+
+\section*{Exploratory Graphics}
+
 <<fig.width=8, fig.height=4>>=
 # Download and decompress file
 if (!file.exists("lassa/metadata.tsv")) {
@@ -48,7 +75,10 @@ if (!file.exists("lassa/metadata.tsv")) {
 }
 
 data <- readr::read_delim("lassa/metadata.tsv", delim="\t")
+@
 
+
+<<fig.width=8, fig.height=4>>=
 cdata <- data %>%
   subset(., !is.na(date)) %>%
   subset(., date !="XXXX-XX-XX") %>%
@@ -85,6 +115,8 @@ cdata %>%
   )
 @
 
+
+
 <<fig.width=8, fig.height=4>>=
 max_length <- max(data$length)
 binwidth <- 100
@@ -103,6 +135,8 @@ data %>%
     title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
   )
 @
+
+
 
 \newpage
 
