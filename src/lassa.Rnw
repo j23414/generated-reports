@@ -138,7 +138,7 @@ cdata %>%
 \item Total lassa records = \Sexpr{nrow(data)}. Notice how this includes samples that lack a collection date.
 \item Total lassa records where strain does not equal accession = \Sexpr{strainset}
 \item Percentage with strain names \Sexpr{sprintf("%.2f", (strainset/nrow(data)) * 100)}\%
-\item Including a strain name seems more likely with recent samples
+\item Pulling in "strain=(.*)" filled in more samples (as compared to 49\%)
 \end{itemize}
 
 
