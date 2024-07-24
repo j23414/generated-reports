@@ -67,14 +67,31 @@ if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg")) 
 
 <<fig.width=8, fig.height=4>>=
 # Download and decompress file
-if (!file.exists("lassa/metadata.tsv")) {
-  url <- "https://data.nextstrain.org/files/workflows/lassa/metadata.tsv.zst"
-  system("mkdir lassa")
-  system(paste("curl -L", url, "-o lassa/metadata.tsv.zst"))
-  system("zstd -d lassa/metadata.tsv.zst -o lassa/metadata.tsv")
+if (!file.exists("lassa/metadata_all.tsv")) {
+  system("mkdir -p lassa")
+  segments <- c("all", "L", "S")
+  for (segment in segments) {
+    file_name <- paste0("metadata_", segment, ".tsv")
+    zst_file <- paste0(file_name, ".zst")
+    url <- paste0("https://data.nextstrain.org/files/workflows/lassa/", zst_file)
+    system(paste0("curl -L ", url, " -o ", "lassa/", zst_file))
+    system(paste0("zstd -d lassa/", zst_file, " -o lassa/", file_name))
+  }
 }
 
-data <- readr::read_delim("lassa/metadata.tsv", delim="\t")
+data <- readr::read_delim("lassa/metadata_all.tsv", delim="\t")
+data_L <- readr::read_delim("lassa/metadata_L.tsv", delim="\t")
+data_S <- readr::read_delim("lassa/metadata_S.tsv", delim="\t")
+
+Lnames <- data_L$accession
+Snames <- data_S$accession
+
+data <- data %>%
+  mutate(
+    segment = case_when( accession %in% Lnames ~ "L",
+                         accession %in% Snames ~ "S",
+                         TRUE ~ "")
+  )
 @
 
 
@@ -113,6 +130,20 @@ cdata %>%
     title=paste("Lassa entries with collection date (n = ",nrow(cdata),")", sep=""),
     x="Year", y="Count"
   )
+
+cdata %>% 
+  ggplot(., aes(x=col_year, fill=segment)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Lassa entries with collection date (n = ",nrow(cdata),") colored by Segment", sep=""),
+    x="Year", y="Count"
+  )
 @
 
 
@@ -134,7 +165,31 @@ data %>%
     y = "Count",
     title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
   )
+
+data %>%
+  ggplot(aes(x = length)) +
+  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+  theme_bw() +
+  scale_x_continuous(
+    breaks = c(seq(0, max_length, by = 1000), max_length),
+    limits = c(0, max_length + 1)
+  ) +
+  labs(
+    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+    y = "Count",
+    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+  ) +
+  facet_grid(rows = vars(segment))
+
+nonseg <- data %>% subset(segment=="")
 @
+
+\begin{itemize}
+\item Total lassa records = \Sexpr{nrow(data)}.
+\item Total L lassa records = \Sexpr{nrow(data_L)}
+\item Total S lassa records = \Sexpr{nrow(data_S)}
+\item Non L or S lassa records = \Sexpr{nrow(nonseg)}
+\end{itemize}
 
 
 
