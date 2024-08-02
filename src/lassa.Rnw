@@ -69,19 +69,19 @@ if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg")) 
 # Download and decompress file
 if (!file.exists("lassa/metadata_all.tsv")) {
   system("mkdir -p lassa")
-  segments <- c("all", "L", "S")
+  segments <- c("all", "l", "s")
   for (segment in segments) {
     file_name <- paste0("metadata_", segment, ".tsv")
     zst_file <- paste0(file_name, ".zst")
-    url <- paste0("https://data.nextstrain.org/files/workflows/lassa/", zst_file)
+    url <- paste0("https://data.nextstrain.org/files/workflows/lassa/", segment, "/metadata.tsv.zst")
     system(paste0("curl -L ", url, " -o ", "lassa/", zst_file))
     system(paste0("zstd -d lassa/", zst_file, " -o lassa/", file_name))
   }
 }
 
 data <- readr::read_delim("lassa/metadata_all.tsv", delim="\t")
-data_L <- readr::read_delim("lassa/metadata_L.tsv", delim="\t")
-data_S <- readr::read_delim("lassa/metadata_S.tsv", delim="\t")
+data_L <- readr::read_delim("lassa/metadata_l.tsv", delim="\t")
+data_S <- readr::read_delim("lassa/metadata_s.tsv", delim="\t")
 
 Lnames <- data_L$accession
 Snames <- data_S$accession
@@ -230,9 +230,41 @@ cdata %>%
 \item Pulling in "strain=(.*)" filled in more samples (as compared to 49\%)
 \end{itemize}
 
+\newpage
 
+\section*{Strain name duplicates}
 
+Are there more than 2 strain name duplicates? More than the S and L segments?
 
+<<fig.width=8, fig.height=4, echo=TRUE>>=
+library(gt)
+count_names <- data %>%
+  group_by(strain) %>%
+  summarize(n=n(), average_length=mean(length)) %>%
+  arrange(desc(n))
+
+more_names <- count_names %>%
+  filter(n>2)
+
+# Print top 10
+more_names %>%
+  head(10) %>%
+  gt() %>%
+  tab_header(title = "Top 10 Strains Name Duplicates by Count") %>%
+  fmt_number(columns = c(n, average_length), decimals = 0) %>%
+  cols_label(
+    strain = "Strain Name",
+    n = "Count Duplicates",
+    average_length = "Average Length"
+  )
+@
+
+\begin{itemize}
+\item Percentage with strain names \Sexpr{sprintf("%.2f", (strainset/nrow(data)) * 100)}\%
+\item Number of strain names that have 1 sequence record: \Sexpr{nrow(count_names %>% filter(n==1))}
+\item Number of strain names that have 2 sequence records: \Sexpr{nrow(count_names %>% filter(n==2))}
+\item Number of strain names that have more than 2 sequence records: \Sexpr{nrow(more_names)}
+\end{itemize}
 
 
 
