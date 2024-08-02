@@ -1,0 +1,114 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Nipah notes}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+
+<<message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(magrittr)
+@
+
+
+\section*{Background}
+
+Nipah genome based on "Nipah Virus: Past Outbreaks and Future Containment" by Vinood Soman Pillai, Gayathri Krishna, and Mohanan Valiya Veettil Figure 1:
+
+<<fig.width=8, fig.height=4>>=
+# Download and decompress file
+if (!file.exists("nipah/viruses-12-00465-g001-550.jpg")) {
+  url <- "https://www.mdpi.com/viruses/viruses-12-00465/article_deploy/html/images/viruses-12-00465-g001-550.jpg"
+  system("mkdir -p nipah")
+  system(paste("curl -L", url, "-o nipah/viruses-12-00465-g001-550.jpg"))
+}
+@
+
+\includegraphics[width=0.5\textwidth]{nipah/viruses-12-00465-g001-550.jpg}
+
+<<fig.width=8, fig.height=4>>=
+
+data <- readr::read_delim("~/github/nextstrain/nipah-branches/updates/ingest/results/metadata.tsv", delim="\t")
+@
+
+\section*{NCBI GenBank records}
+
+<<fig.width=8, fig.height=4>>=
+cdata <- data %>%
+  subset(., !is.na(date)) %>%
+  subset(., date !="XXXX-XX-XX") %>%
+  mutate(
+    date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+    col_year = substr(date, 1, 4),
+    col_mon = substr(date, 6,7),
+    col_day = substr(date, 9,10)
+  )
+
+cdata %>% 
+  ggplot(., aes(x=col_year, fill=country)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Nipah entries with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  )
+@
+
+\begin{itemize}
+\item Total nipah records = \Sexpr{nrow(data)}.
+\end{itemize}
+
+<<fig.width=8, fig.height=3>>=
+max_length <- max(data$length)
+binwidth <- 100
+
+data %>%
+  ggplot(aes(x = length)) +
+  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+  theme_bw() +
+  scale_x_continuous(
+    breaks = c(seq(0, max_length, by = 2500), max_length),
+    limits = c(0, max_length + 1)
+  ) +
+  labs(
+    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+    y = "Count",
+    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+  )
+@
+
+
+\end{document}
