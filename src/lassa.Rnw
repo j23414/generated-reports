@@ -22,7 +22,7 @@
 
 \usepackage{fancyhdr}
 \pagestyle{fancy}
-\lhead{Lassa survey}
+\lhead{Lassa notes}
 \rhead{last update: \today}
 
 \begin{document}
