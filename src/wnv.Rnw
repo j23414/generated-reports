@@ -1,0 +1,177 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{WNV notes}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+
+<<message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(magrittr)
+@
+
+
+\section*{Background}
+
+WNV is a X with a single genome of Y length
+
+\section*{Exploratory Graphics}
+
+<<fig.width=8, fig.height=4>>=
+# Download and decompress file
+if (!file.exists("wnv/metadata.tsv")) {
+  system("mkdir -p wnv")
+  file_name <- "metadata.tsv"
+  zst_file <- paste0(file_name, ".zst")
+  url <- paste0("https://data.nextstrain.org/files/workflows/wnv/metadata.tsv.zst")
+  system(paste0("curl -L ", url, " -o ", "wnv/", zst_file))
+  system(paste0("zstd -d wnv/", zst_file, " -o wnv/", file_name))
+}
+
+data <- readr::read_delim("wnv/metadata.tsv", delim="\t")
+@
+
+
+<<fig.width=8, fig.height=4>>=
+cdata <- data %>%
+  subset(., !is.na(date)) %>%
+  subset(., date !="XXXX-XX-XX") %>%
+  mutate(
+    date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+    col_year = substr(date, 1, 4),
+    col_mon = substr(date, 6,7),
+    col_day = substr(date, 9,10)
+  )
+              
+cdata %>% 
+  ggplot(., aes(x=col_year, fill=region)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  )
+
+cdata %>% 
+  ggplot(., aes(x=col_year, fill=clade_membership)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  )
+@
+
+<<fig.width=8, fig.height=4>>=
+max_length <- max(data$length)
+binwidth <- 200
+
+data %>%
+  ggplot(aes(x = length)) +
+  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+  theme_bw() +
+  labs(
+    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+    y = "Count",
+    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+  )
+@
+
+\section*{Global subsampling}
+
+<<fig.width=8, fig.height=4>>=
+filtered <- data %>% 
+  subset(., length>9800)
+
+cdata %>%
+  mutate(filter=length>9800) %>%
+  ggplot(., aes(x=col_year, fill=filter)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  ) +
+  scale_fill_manual(values = c("TRUE" = "#619CFF", "FALSE" = "#F8766D"),
+                    labels = c("TRUE" = "Above length filter", "FALSE" = "Below length filter"))
+@
+
+<<fig.width=8, fig.height=8>>=
+data %>%
+  subset(., !is.na(country)) %>%
+  mutate(is_high = country %in% c("USA", "Italy")) %>%
+  #subset(., country != "USA") %>%
+  mutate(filter=length>9800) %>%
+  ggplot(., aes(x=country, fill=filter)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("WNV entries that were above or below filter, by country (n = ",nrow(subset(data, length>9800)),")", sep=""),
+    x="Year", y="Count"
+  ) +
+  scale_fill_manual(values = c("TRUE" = "#619CFF", "FALSE" = "#F8766D"),
+                    labels = c("TRUE" = "Above length filter", "FALSE" = "Below length filter"))+
+  facet_grid(is_high~., scales = "free",
+             labeller = as_labeller(c("TRUE" = "Highs", "FALSE" = "Lows"))) #+
+  #scale_grid_manual(labels = c("TRUE" = "Highs", "FALSE" = "Lows"))
+@
+
+
+\begin{itemize}
+\item Total WNV records = \Sexpr{nrow(data)}. Note how this includes records without collection date
+\item Total WNV records that passes the length filter = \Sexpr{nrow(filtered)}
+\end{itemize}
+
+If this number is lower than 4k, probably don't need to subsample further.
+Global build might need a different root... not the NY99
+
+
+\end{document}
