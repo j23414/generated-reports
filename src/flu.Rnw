@@ -28,26 +28,20 @@
 \begin{document}
 
 <<,echo=FALSE>>=
-#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
-opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE, warning=FALSE, message=FALSE)
+#opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
 @
-
-
-<<message=FALSE, warning=FALSE>>=
-library(tidyverse)
-library(magrittr)
-@
-
 
 \section*{When is the influenza peak season?}
 
 CDC provides weekly influenza surveillance data through FluView and the R package cdcfluview. Since the package seems to be dropped from CRAN, pull from the github site. ILINet (Influenza-like Illness Surveillance Network) data contains weekly levels across the US and can be summarized by region (e.g. "national" or specific state names). WHO NREVSS(National Respiratory and Enteric Virus Surveillance System) provides more detailed data including counts of types and subtypes and splitting the data out into public health lab and clinical datasets.
 
-
 <<fig.width=8, fig.height=3.5>>=
 # Install and load required packages
 #devtools::install_github("hrbrmstr/cdcfluview")
 library(cdcfluview)
+library(tidyverse)
+library(magrittr)
 @
 
 <<fig.width=8, fig.height=6>>=
@@ -156,4 +150,11 @@ ggplot(seasonal_pattern, aes(x = month_only, y = avg_ili)) +
   theme_minimal()
 @
 
+\section*{When to get vaccinated?}
+
+General guidance is before the season: September to October. Looking into Vaccine Effectiveness studies
+
+* https://www.cdc.gov/flu-vaccines-work/php/effectiveness-studies/index.html
+
+Peak immunity and waning immunity.
 \end{document}
