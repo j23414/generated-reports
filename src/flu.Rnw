@@ -1,0 +1,159 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Flu notes}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+
+<<message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(magrittr)
+@
+
+
+\section*{When is the influenza peak season?}
+
+CDC provides weekly influenza surveillance data through FluView and the R package cdcfluview. Since the package seems to be dropped from CRAN, pull from the github site. ILINet (Influenza-like Illness Surveillance Network) data contains weekly levels across the US and can be summarized by region (e.g. "national" or specific state names). WHO NREVSS(National Respiratory and Enteric Virus Surveillance System) provides more detailed data including counts of types and subtypes and splitting the data out into public health lab and clinical datasets.
+
+
+<<fig.width=8, fig.height=3.5>>=
+# Install and load required packages
+#devtools::install_github("hrbrmstr/cdcfluview")
+library(cdcfluview)
+@
+
+<<fig.width=8, fig.height=6>>=
+# Fetch Data
+ilinet_data <- ilinet(region = "national", years = 2020:2024)
+who_data_phl <- who_nrevss(region = "national", years = 2020:2024)$public_health_labs
+who_data_cln <- who_nrevss(region = "national", years = 2020:2024)$clinical_labs
+
+# Process ILINet data
+ili_processed <- ilinet_data %>%
+  mutate(month = lubridate::floor_date(week_start, "month")) %>%
+  group_by(month) %>%
+  summarize(
+    case_counts = sum(weighted_ili, na.rm = TRUE),
+    dataset = "ILINet"
+    )
+
+# Process WHO NREVSS data
+who_phl_processed <- who_data_phl %>%
+  mutate(month = lubridate::floor_date(wk_date, "month")) %>%
+  group_by(month) %>%
+  summarize(
+    case_counts = sum(total_specimens, na.rm = TRUE),
+    dataset = "WHO PHL"
+    )
+
+who_cln_processed <- who_data_cln %>%
+  mutate(month = lubridate::floor_date(wk_date, "month")) %>%
+  group_by(month) %>%
+  summarize(
+    case_counts = sum(total_specimens, na.rm = TRUE),
+    dataset = "WHO CLN"
+    )
+
+# Combine datasets
+combined_data <- bind_rows(ili_processed, who_phl_processed, who_cln_processed)
+
+# Function to create rectangles for Nov-Feb periods
+create_winter_rects <- function(start_date, end_date) {
+  winters <- data.frame(
+    start = seq(floor_date(start_date, "year") %m+% months(10), end_date, by = "1 year"),
+    end = seq(floor_date(start_date, "year") %m+% months(10), end_date, by = "1 year") %m+% months(3)
+  )
+  winters <- winters[winters$start <= end_date & winters$end >= start_date, ]
+  winters$start <- pmax(winters$start, start_date)
+  winters$end <- pmin(winters$end, end_date)
+  return(winters)
+}
+
+# Create winter rectangles
+winter_rects <- create_winter_rects(min(combined_data$month), max(combined_data$month))
+
+ggplot(combined_data, aes(x = month, y = case_counts, fill = dataset)) +
+  geom_rect(data = winter_rects, inherit.aes = FALSE,
+            aes(xmin = start, xmax = end, ymin = -Inf, ymax = Inf),
+            #fill = "#F9E79F", alpha = 0.5) +
+            fill = "#F6B93B", alpha = 0.5) +
+  geom_col(position = "dodge") +
+  scale_x_date(date_breaks = "3 months", date_labels = "%b %Y") +
+  labs(title = "Flu Cases Comparison: ILINet vs WHO NREVSS (public health lab & clinical)",
+       x = "Month",
+       y = "Case Counts",
+       fill = "Dataset") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5),
+    legend.position = "none"
+    ) +
+  facet_grid(dataset ~., scale="free")
+@
+
+Seems mostly consistent with "influenza activity typically begins to increase in early November and peaks between December and February". To dig further, using only ILINet data, aggregate monthly case counts and calculate an average case count across 2010 to 2024:
+
+<<fig.width=5, fig.height=1.75>>==
+# Fetch national flu data for multiple years
+flu_data <- ilinet(region = "national", years = 2010:2024)
+
+# Aggregate to monthly data
+monthly_flu <- flu_data %>%
+  mutate(month = floor_date(week_start, "month")) %>%
+  group_by(month) %>%
+  summarize(avg_ili = mean(weighted_ili, na.rm = TRUE))
+
+# Calculate average ILI for each month across years
+seasonal_pattern <- monthly_flu %>%
+  mutate(month_only = month(month)) %>%
+  group_by(month_only) %>%
+  summarize(avg_ili = mean(avg_ili, na.rm = TRUE))
+
+# Plot seasonal pattern
+ggplot(seasonal_pattern, aes(x = month_only, y = avg_ili)) +
+  geom_rect(
+    inherit.aes = FALSE,
+    aes(xmin = 1, xmax = 2, ymin = -Inf, ymax = Inf),
+    fill = "#F6B93B", alpha = 0.5) +
+  geom_rect(
+    inherit.aes = FALSE,
+    aes(xmin = 11, xmax = 12, ymin = -Inf, ymax = Inf),
+    fill = "#F6B93B", alpha = 0.5) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks = 1:12, labels = month.abb) +
+  labs(title = "Average Seasonal Influenza Pattern (2010-2024)",
+       x = "Month",
+       y = "Average") +
+  theme_minimal()
+@
+
+\end{document}
