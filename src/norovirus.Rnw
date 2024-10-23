@@ -1,0 +1,170 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Norovirus notes}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+
+<<message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(magrittr)
+@
+
+
+\section*{Exploratory Graphics}
+
+<<fig.width=8, fig.height=4>>=
+# Download and decompress file
+if (!file.exists("norovirus/metadata.tsv")) {
+  system("mkdir -p norovirus")
+  file_name <- "metadata.tsv"
+  zst_file <- paste0(file_name, ".zst")
+  url <- paste0("https://data.nextstrain.org/files/workflows/norovirus/metadata.tsv.zst")
+  system(paste0("curl -L ", url, " -o ", "norovirus/", zst_file))
+  system(paste0("zstd -d norovirus/", zst_file, " -o norovirus/", file_name))
+}
+
+data <- readr::read_delim("norovirus/metadata.tsv", delim="\t")
+@
+
+
+\section*{NCBI GenBank records}
+
+<<fig.width=8, fig.height=4>>=
+cdata <- data %>%
+  subset(., !is.na(date)) %>%
+  subset(., date !="XXXX-XX-XX") %>%
+  mutate(
+    date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+    col_year = substr(date, 1, 4),
+    col_mon = substr(date, 6,7),
+    col_day = substr(date, 9,10)
+  )
+
+cdata %>% 
+  ggplot(., aes(x=col_year, fill=region)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Norovirus entries with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  )
+
+cdata %>% 
+  mutate(
+    type=case_when(!is.na(ORF1_type) ~ TRUE,
+                   !is.na(ORF2_type) ~ TRUE,
+                   1==1 ~ FALSE)
+  ) %>%
+  ggplot(., aes(x=col_year, fill=type)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Norovirus entries with ORF1 or ORF2 types (n = ",
+                nrow(subset(cdata,!is.na(ORF2_type) | !is.na(ORF1_type))),
+                " of ", 
+                nrow(cdata),
+                ")",
+                sep=""),
+    x="Year", y="Count"
+  )
+@
+
+<<fig.width=8, fig.height=6>>=
+cdata %>% 
+  subset(!is.na(ORF2_type)) %>%
+  ggplot(., aes(x=col_year, fill=ORF2_type)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Norovirus entries with ORF2_type (n = ",nrow(subset(cdata,!is.na(ORF2_type))),")", sep=""),
+    x="Year", y="Count"
+  )
+@
+
+<<fig.width=8, fig.height=8>>=
+cdata %>% 
+  subset(!is.na(ORF1_type)) %>%
+  ggplot(., aes(x=col_year, fill=ORF1_type)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Norovirus entries with ORF1_type (n = ",nrow(subset(cdata,!is.na(ORF1_type))),")", sep=""),
+    x="Year", y="Count"
+  )
+@
+
+\begin{itemize}
+\item Total norovirus records = \Sexpr{nrow(data)}.
+\end{itemize}
+
+<<fig.width=8, fig.height=3>>=
+max_length <- max(data$length)
+binwidth <- 100
+
+data %>%
+  ggplot(aes(x = length)) +
+  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+  theme_bw() +
+  scale_x_continuous(
+    breaks = c(seq(0, max_length, by = 2500), max_length),
+    limits = c(0, max_length + 1)
+  ) +
+  labs(
+    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+    y = "Count",
+    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+  )
+@
+
+
+
+\end{document}
