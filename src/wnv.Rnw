@@ -16,6 +16,7 @@
 \usepackage{threeparttablex}
 \usepackage[normalem]{ulem}
 \usepackage{makecell}
+\usepackage{hyperref}
 
 \usepackage{multicol}
 \usepackage{graphicx}
@@ -41,11 +42,11 @@ library(magrittr)
 
 \section*{Background}
 
-WNV is a X with a single genome of Y length
+CDC website: \url{https://www.cdc.gov/west-nile-virus/index.html}
 
 \section*{Exploratory Graphics}
 
-<<fig.width=8, fig.height=4>>=
+<<fig.width=8, fig.height=3>>=
 # Download and decompress file
 if (!file.exists("wnv/metadata.tsv")) {
   system("mkdir -p wnv")
@@ -59,6 +60,39 @@ if (!file.exists("wnv/metadata.tsv")) {
 data <- readr::read_delim("wnv/metadata.tsv", delim="\t")
 @
 
+\subsection*{How long is the WNV genome?}
+
+WNV is approximately 11k nt long. The samples pulled from NCBI GenBank have the following distribution of lengths. We can pick a length cut-off for the phylogenic tree:
+
+<<fig.width=8, fig.height=3>>=
+approx_length <- 11000
+perc_length <- c(1.0, 0.90, 0.8, 0.75, 0.70)*approx_length
+
+max_length <- max(data$length)
+binwidth <- 200
+
+data %>%
+  ggplot(aes(x = length)) +
+  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+  theme_bw() +
+  labs(
+    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+    y = "Count",
+    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+  ) +
+  geom_vline(xintercept = perc_length, linetype = "dashed", color = "red") +
+  annotate("text", 
+           x = perc_length+binwidth*1.5, 
+           y = rep(15000, 5),
+           label = paste0(round(perc_length), " (", c(100, 90, 80, 75, 70), "%)"),
+           hjust = -0.1,
+           angle = -90,
+           size = 3,
+           color = "blue")
+@
+
+\subsection*{How well sampled is WNV across time and space?}
+
 
 <<fig.width=8, fig.height=4>>=
 cdata <- data %>%
@@ -70,7 +104,7 @@ cdata <- data %>%
     col_mon = substr(date, 6,7),
     col_day = substr(date, 9,10)
   )
-              
+
 cdata %>% 
   ggplot(., aes(x=col_year, fill=region)) + 
   geom_bar() +
@@ -84,7 +118,38 @@ cdata %>%
     title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
     x="Year", y="Count"
   )
+@
 
+The earliest samples seem to be from 1931. However, these are EF631122 and EF631123 and are supposedly collected in Illinois, USA, much earlier than the NY99 event. We might need to dig into publications that contain these GenBanks to check if this collection date is correct. Such as publication:
+
+\begin{itemize}
+\item Amore, G., Bertolotti, L., Hamer, G.L., Kitron, U.D., Walker, E.D., Ruiz, M.O., Brawn, J.D. and Goldberg, T.L., 2010. Multi-year evolutionary dynamics of West Nile virus in suburban Chicago, USA, 2005–2007. Philosophical Transactions of the Royal Society B: Biological Sciences, 365(1548), pp.1871-1878.
+\end{itemize}
+
+\subsection*{What lineages are available for WNV?}
+
+\begin{itemize}
+\item \textbf{Global lineage system:} Koch, R. Tobias, Diana Erazo, Arran J. Folly, Nicholas Johnson, Simon Dellicour, Nathan D. Grubaugh, and Chantal BF Vogels. "Genomic epidemiology of West Nile virus in Europe." One Health (2023): 100664.
+\item \textbf{USA-based system:} Hadfield, J., Brito, A.F., Swetnam, D.M., Vogels, C.B., Tokarz, R.E., Andersen, K.G., Smith, R.C., Bedford, T. and Grubaugh, N.D., 2019. Twenty years of West Nile virus spread and evolution in the Americas visualized by Nextstrain. PLoS pathogens, 15(10), p.e1008042.
+\end{itemize}
+
+<<fig.width=8, fig.height=3>>=
+cdata %>% 
+  ggplot(., aes(x=col_year, fill=lineage)) + 
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("Count of global-based lineage samples with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  )
+@
+
+<<fig.width=8, fig.height=3>>=
 cdata %>% 
   ggplot(., aes(x=col_year, fill=clade_membership)) + 
   geom_bar() +
@@ -95,56 +160,30 @@ cdata %>%
     legend.title = element_blank()
   ) +
   labs(
-    title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
+    title=paste("Count of USA-based lineage samples with collection date (n = ",nrow(cdata),")", sep=""),
     x="Year", y="Count"
   )
 @
 
-<<fig.width=8, fig.height=4>>=
-max_length <- max(data$length)
-binwidth <- 200
-
-data %>%
-  ggplot(aes(x = length)) +
-  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
-  theme_bw() +
-  labs(
-    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
-    y = "Count",
-    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
-  )
-@
+\newpage
 
 \section*{Global subsampling}
 
-<<fig.width=8, fig.height=4>>=
-filtered <- data %>% 
-  subset(., length>9800)
+If min length is set to 80 percent, or 8800nt:
 
-cdata %>%
-  mutate(filter=length>9800) %>%
-  ggplot(., aes(x=col_year, fill=filter)) + 
-  geom_bar() +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
-    legend.position = "bottom",
-    legend.title = element_blank()
-  ) +
-  labs(
-    title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
-    x="Year", y="Count"
-  ) +
-  scale_fill_manual(values = c("TRUE" = "#619CFF", "FALSE" = "#F8766D"),
-                    labels = c("TRUE" = "Above length filter", "FALSE" = "Below length filter"))
+<<fig.width=8, fig.height=3>>=
+min_length <- 8800
+
+filtered <- data %>% 
+  subset(., length>min_length)
 @
 
-<<fig.width=8, fig.height=8>>=
+<<fig.width=8, fig.height=6>>=
 data %>%
   subset(., !is.na(country)) %>%
   mutate(is_high = country %in% c("USA", "Italy")) %>%
   #subset(., country != "USA") %>%
-  mutate(filter=length>9800) %>%
+  mutate(filter=length>min_length) %>%
   ggplot(., aes(x=country, fill=filter)) + 
   geom_bar() +
   theme_bw() +
@@ -154,7 +193,7 @@ data %>%
     legend.title = element_blank()
   ) +
   labs(
-    title=paste("WNV entries that were above or below filter, by country (n = ",nrow(subset(data, length>9800)),")", sep=""),
+    title=paste("WNV entries that were above or below filter, by country (n = ",nrow(subset(data, length>min_length))," where min-length=", min_length,")", sep=""),
     x="Year", y="Count"
   ) +
   scale_fill_manual(values = c("TRUE" = "#619CFF", "FALSE" = "#F8766D"),
