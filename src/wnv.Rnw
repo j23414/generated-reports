@@ -37,6 +37,8 @@ opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align
 <<message=FALSE, warning=FALSE>>=
 library(tidyverse)
 library(magrittr)
+library(knitr)
+library(kableExtra)
 @
 
 
@@ -209,8 +211,31 @@ data %>%
 \item Total WNV records that passes the length filter = \Sexpr{nrow(filtered)}
 \end{itemize}
 
-If this number is lower than 4k, probably don't need to subsample further.
-Global build might need a different root... not the NY99
+If this number is lower than 4k, probably don't need to sub sample further.
+
+\newpage
+
+\subsection*{Who are the main submitters of sequence data?}
+
+
+<<fig.width=8, fig.height=6>>=
+top_x=25
+top_authors <- data %>%
+  mutate(
+    authors = tolower(authors)
+  ) %>%
+  group_by(authors) %>%
+  summarise(
+    n = n(),
+    regions = paste(unique(region), collapse = ", "),
+    countries = paste(unique(country), collapse = ", ")
+  ) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = top_x)
+
+kable(top_authors, caption = paste("Top ",top_x," most frequent sequence submitters with their region and countries", sep="")) %>%
+  kable_styling(latex_options = c("hold_position", "striped"))
+@
 
 
 \end{document}
