@@ -36,6 +36,8 @@ opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align
 <<message=FALSE, warning=FALSE>>=
 library(tidyverse)
 library(magrittr)
+library(knitr)
+library(kableExtra)
 @
 
 
@@ -55,10 +57,45 @@ if (!file.exists("norovirus/metadata.tsv")) {
 data <- readr::read_delim("norovirus/metadata.tsv", delim="\t")
 @
 
+\subsection*{What is the genome length of norovirus?}
 
-\section*{NCBI GenBank records}
+The norovirus genome is approximately 7500 in length.
 
-<<fig.width=8, fig.height=4>>=
+<<fig.width=8, fig.height=3>>=
+approx_length <- 7500
+perc_length <- c(1.0, 0.90, 0.8, 0.75, 0.70)*approx_length
+
+max_length <- max(data$length)
+binwidth <- 100
+
+data %>%
+  ggplot(aes(x = length)) +
+  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+  theme_bw() +
+  scale_x_continuous (
+     breaks = c(seq(0, max_length, by = 2500), max_length),
+     limits = c(0, max_length + 1)
+  ) +
+  labs(
+    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+    y = "Count",
+    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+  ) +
+  geom_vline(xintercept = perc_length, linetype = "dashed", color = "red") +
+  annotate("text", 
+           x = perc_length+binwidth*1.5, 
+           y = rep(20000, 5),
+           label = paste0(round(perc_length), " (", c(100, 90, 80, 75, 70), "%)"),
+           hjust = -0.1,
+           angle = -90,
+           size = 3,
+           color = "blue")
+@
+
+
+\subsection*{How well sampled is norovirus across time and space?}
+
+<<fig.width=8, fig.height=3.5>>=
 cdata <- data %>%
   subset(., !is.na(date)) %>%
   subset(., date !="XXXX-XX-XX") %>%
@@ -82,7 +119,37 @@ cdata %>%
     title=paste("Norovirus entries with collection date (n = ",nrow(cdata),")", sep=""),
     x="Year", y="Count"
   )
+@
 
+\newpage
+
+\subsection*{Who are the main submitters of sequence data?}
+
+
+<<fig.width=8, fig.height=6>>=
+top_x=25
+top_authors <- data %>%
+  mutate(
+    abbr_authors = tolower(abbr_authors)
+  ) %>%
+  group_by(abbr_authors) %>%
+  summarise(
+    n = n(),
+    regions = paste(unique(region), collapse = ", "),
+    countries = paste(unique(country), collapse = ", ")
+  ) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = top_x)
+
+kable(top_authors, caption = paste("Top ",top_x," most frequent sequence submitters with their region and countries", sep="")) %>%
+  kable_styling(latex_options = c("hold_position", "striped"))
+@
+
+\newpage
+
+\subsection*{What lineage systems are available for norovirus?}
+
+<<fig.width=8, fig.height=3>>=
 cdata %>% 
   mutate(
     type=case_when(!is.na(ORF1_type) ~ TRUE,
@@ -141,30 +208,6 @@ cdata %>%
     x="Year", y="Count"
   )
 @
-
-\begin{itemize}
-\item Total norovirus records = \Sexpr{nrow(data)}.
-\end{itemize}
-
-<<fig.width=8, fig.height=3>>=
-max_length <- max(data$length)
-binwidth <- 100
-
-data %>%
-  ggplot(aes(x = length)) +
-  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
-  theme_bw() +
-  scale_x_continuous(
-    breaks = c(seq(0, max_length, by = 2500), max_length),
-    limits = c(0, max_length + 1)
-  ) +
-  labs(
-    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
-    y = "Count",
-    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
-  )
-@
-
 
 
 \end{document}
