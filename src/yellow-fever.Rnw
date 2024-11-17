@@ -22,7 +22,7 @@
 
 \usepackage{fancyhdr}
 \pagestyle{fancy}
-\lhead{Nipah notes}
+\lhead{Yellow-fever notes}
 \rhead{last update: \today}
 
 \begin{document}
@@ -48,22 +48,23 @@ source("shared_functions.R")
 
 \section*{Background}
 
-Nipah genome based on "Nipah Virus: Past Outbreaks and Future Containment" by Vinood Soman Pillai, Gayathri Krishna, and Mohanan Valiya Veettil Figure 1:
+\section*{Exploratory Graphics}
 
-<<fig.width=8, fig.height=4>>=
+<<fig.width=8, fig.height=3>>=
+pathogen <- "yellow-fever"
+
 # Download and decompress file
-if (!file.exists("nipah/viruses-12-00465-g001-550.jpg")) {
-  url <- "https://www.mdpi.com/viruses/viruses-12-00465/article_deploy/html/images/viruses-12-00465-g001-550.jpg"
-  system("mkdir -p nipah")
-  system(paste("curl -L", url, "-o nipah/viruses-12-00465-g001-550.jpg"))
+data_file=paste0(pathogen, "/metadata.tsv")
+if (!file.exists(paste0(pathogen,"/metadata.tsv"))) {
+  system(paste("mkdir -p ",pathogen, sep=""))
+  file_name <- "metadata.tsv"
+  zst_file <- paste0(file_name, ".zst")
+  url <- paste0("https://data.nextstrain.org/files/workflows/yellow-fever/metadata.tsv.zst")
+  system(paste0("curl -L ", url, " -o ", pathogen,"/", zst_file))
+  system(paste0("zstd -d yellow-fever/", zst_file, " -o ", pathogen, "/", file_name))
 }
-@
 
-\includegraphics[width=0.5\textwidth]{nipah/viruses-12-00465-g001-550.jpg}
-
-<<fig.width=8, fig.height=4>>=
-
-data <- readr::read_delim("~/github/nextstrain/nipah-branches/updates/ingest/results/metadata.tsv", delim="\t")
+data <- readr::read_delim(paste0(pathogen,"/metadata.tsv"), delim="\t")
 @
 
 \section*{NCBI GenBank records}
@@ -71,17 +72,17 @@ data <- readr::read_delim("~/github/nextstrain/nipah-branches/updates/ingest/res
 <<fig.width=8, fig.height=2.5>>=
 diagnostic_length_plot(
   data = data,
-  approx_length = 18200,
+  approx_length = 11000,
   binwidth = 200,
-  percentage_y = 100
+  percentage_y = 750
 )
 @
 
-<<fig.width=8, fig.height=3.5>>=
+<<fig.width=8, fig.height=4>>=
 diagnostic_time_fill_plot(
   data=data,
-  fill="country"
-  )
+  fill="region"
+)
 @
 
 <<fig.width=8, fig.height=3>>=

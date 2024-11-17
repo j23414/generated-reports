@@ -36,6 +36,7 @@ opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align
 <<message=FALSE, warning=FALSE>>=
 library(tidyverse)
 library(magrittr)
+source("shared_functions.R")
 @
 
 
@@ -94,8 +95,14 @@ data <- data %>%
   )
 @
 
-
 <<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot(
+  data=data,
+  fill="country"
+)
+@
+
+<<fig.width=8, fig.height=3>>=
 cdata <- data %>%
   subset(., !is.na(date)) %>%
   subset(., date !="XXXX-XX-XX") %>%
@@ -106,65 +113,40 @@ cdata <- data %>%
     col_day = substr(date, 9,10)
   )
 
-summarize_group <- function(data, serotype="DENV1", MinYear=2000) {
-  data %>%
-  subset(., col_year > MinYear) %>%
-  select(., c("accession", "country", "col_year", "date_adjusted")) %>%
-  group_by(, ColDate) %>%
-  summarise(
-    n=n()
-  ) %>%
-  ungroup(.)
-}
-              
-cdata %>% 
-  ggplot(., aes(x=col_year, fill=country)) + 
-  geom_bar() +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
-    legend.position = "bottom",
-    legend.title = element_blank()
-  ) +
-  labs(
-    title=paste("Lassa entries with collection date (n = ",nrow(cdata),")", sep=""),
-    x="Year", y="Count"
-  )
-
-cdata %>% 
-  ggplot(., aes(x=col_year, fill=segment)) + 
-  geom_bar() +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
-    legend.position = "bottom",
-    legend.title = element_blank()
-  ) +
-  labs(
-    title=paste("Lassa entries with collection date (n = ",nrow(cdata),") colored by Segment", sep=""),
-    x="Year", y="Count"
+diagnostic_time_fill_plot(
+  data,
+  margin_l=0.5,
+  fill="segment",
+  title="Lassa entries with collection date"
   )
 @
 
-
+<<fig.width=8, fig.height=3>>=
+diagnostic_length_plot(
+  data=data,
+  approx_length = 7470,
+  binwidth = 100,
+  percentage_y = 400
+)
+@
 
 <<fig.width=8, fig.height=4>>=
 max_length <- max(data$length)
 binwidth <- 100
-
-data %>%
-  ggplot(aes(x = length)) +
-  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
-  theme_bw() +
-  scale_x_continuous(
-    breaks = c(seq(0, max_length, by = 1000), max_length),
-    limits = c(0, max_length + 1)
-  ) +
-  labs(
-    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
-    y = "Count",
-    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
-  )
+# 
+# data %>%
+#   ggplot(aes(x = length)) +
+#   geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+#   theme_bw() +
+#   scale_x_continuous(
+#     breaks = c(seq(0, max_length, by = 1000), max_length),
+#     limits = c(0, max_length + 1)
+#   ) +
+#   labs(
+#     x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+#     y = "Count",
+#     title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+#   )
 
 data %>%
   ggplot(aes(x = length)) +
@@ -190,8 +172,6 @@ nonseg <- data %>% subset(segment=="")
 \item Total S lassa records = \Sexpr{nrow(data_S)}
 \item Non L or S lassa records = \Sexpr{nrow(nonseg)}
 \end{itemize}
-
-
 
 \newpage
 
@@ -266,6 +246,13 @@ more_names %>%
 \item Number of strain names that have more than 2 sequence records: \Sexpr{nrow(more_names)}
 \end{itemize}
 
+<<fig.width=8, fig.height=3>>=
+top_x_author_table(
+  data=data,
+  top_x=25,
+  authors="abbr_authors"
+)
+@
 
 
 \end{document}

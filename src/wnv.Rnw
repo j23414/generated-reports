@@ -39,6 +39,11 @@ library(tidyverse)
 library(magrittr)
 library(knitr)
 library(kableExtra)
+library(cowplot)
+@
+
+<<message=FALSE, warning=FALSE>>=
+source("shared_functions.R")
 @
 
 \section*{Background}
@@ -63,61 +68,24 @@ data <- readr::read_delim("wnv/metadata.tsv", delim="\t")
 
 \subsection*{How long is the WNV genome?}
 
-WNV is approximately 11k nt long. The samples pulled from NCBI GenBank have the following distribution of lengths. We can pick a length cut-off for the phylogenic tree:
+WNV is approximately 11k nt long. The samples pulled from NCBI GenBank have the following distribution of lengths. Mostly seeing two clusters--very short sequences or around the full genome length.
 
-<<fig.width=8, fig.height=3>>=
-approx_length <- 11000
-perc_length <- c(1.0, 0.90, 0.8, 0.75, 0.70)*approx_length
-
-max_length <- max(data$length)
-binwidth <- 200
-
-data %>%
-  ggplot(aes(x = length)) +
-  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
-  theme_bw() +
-  labs(
-    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
-    y = "Count",
-    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
-  ) +
-  geom_vline(xintercept = perc_length, linetype = "dashed", color = "red") +
-  annotate("text", 
-           x = perc_length+binwidth*1.5, 
-           y = rep(15000, 5),
-           label = paste0(round(perc_length), " (", c(100, 90, 80, 75, 70), "%)"),
-           hjust = -0.1,
-           angle = -90,
-           size = 3,
-           color = "blue")
+<<fig.width=8, fig.height=2.5>>=
+diagnostic_length_plot(
+  data = data,
+  approx_length = 11000,
+  binwidth = 200,
+  percentage_y = 15000
+)
 @
 
 \subsection*{How well sampled is WNV across time and space?}
 
-
 <<fig.width=8, fig.height=4>>=
-cdata <- data %>%
-  subset(., !is.na(date)) %>%
-  subset(., date !="XXXX-XX-XX") %>%
-  mutate(
-    date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
-    col_year = substr(date, 1, 4),
-    col_mon = substr(date, 6,7),
-    col_day = substr(date, 9,10)
-  )
-
-cdata %>% 
-  ggplot(., aes(x=col_year, fill=region)) + 
-  geom_bar() +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
-    legend.position = "bottom",
-    legend.title = element_blank()
-  ) +
-  labs(
-    title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
-    x="Year", y="Count"
+diagnostic_time_fill_plot(
+  data,
+  margin_l=0.5,
+  fill="region"
   )
 @
 
@@ -134,35 +102,31 @@ The earliest samples seem to be from 1931. However, these are EF631122 and EF631
 \item \textbf{USA-based system:} Hadfield, J., Brito, A.F., Swetnam, D.M., Vogels, C.B., Tokarz, R.E., Andersen, K.G., Smith, R.C., Bedford, T. and Grubaugh, N.D., 2019. Twenty years of West Nile virus spread and evolution in the Americas visualized by Nextstrain. PLoS pathogens, 15(10), p.e1008042.
 \end{itemize}
 
-<<fig.width=8, fig.height=3>>=
-cdata %>% 
-  ggplot(., aes(x=col_year, fill=lineage)) + 
-  geom_bar() +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
-    legend.position = "bottom",
-    legend.title = element_blank()
-  ) +
-  labs(
-    title=paste("Count of global-based lineage samples with collection date (n = ",nrow(cdata),")", sep=""),
-    x="Year", y="Count"
+<<fig.width=8, fig.height=3.5>>=
+diagnostic_time_fill_plot(
+  data,
+  margin_l=0.5,
+  fill="lineage",
+  title="Global lineage"
   )
 @
 
-<<fig.width=8, fig.height=3>>=
-cdata %>% 
-  ggplot(., aes(x=col_year, fill=clade_membership)) + 
-  geom_bar() +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
-    legend.position = "bottom",
-    legend.title = element_blank()
-  ) +
-  labs(
-    title=paste("Count of USA-based lineage samples with collection date (n = ",nrow(cdata),")", sep=""),
-    x="Year", y="Count"
+<<fig.width=8, fig.height=3.5>>=
+cdata <- data %>%
+  subset(., !is.na(date)) %>%
+  subset(., date !="XXXX-XX-XX") %>%
+  dplyr::mutate(
+    date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+    col_year = substr(date, 1, 4),
+    col_mon = substr(date, 6, 7),
+    col_day = substr(date, 9, 10)
+  )
+
+diagnostic_time_fill_plot(
+  data,
+  margin_l=0.5,
+  fill="clade_membership",
+  title="Count of USA-based lineage samples with collection date"
   )
 @
 
@@ -218,22 +182,7 @@ If this number is lower than 4k, probably don't need to sub sample further.
 
 
 <<fig.width=8, fig.height=6>>=
-top_x=25
-top_authors <- data %>%
-  mutate(
-    authors = tolower(authors)
-  ) %>%
-  group_by(authors) %>%
-  summarise(
-    n = n(),
-    regions = paste(unique(region), collapse = ", "),
-    countries = paste(unique(country), collapse = ", ")
-  ) %>%
-  arrange(desc(n)) %>%
-  slice_head(n = top_x)
-
-kable(top_authors, caption = paste("Top ",top_x," most frequent sequence submitters with their region and countries", sep="")) %>%
-  kable_styling(latex_options = c("hold_position", "striped"))
+top_x_author_table(data, top_x=25)
 @
 
 \newpage
@@ -241,18 +190,11 @@ kable(top_authors, caption = paste("Top ",top_x," most frequent sequence submitt
 \subsection*{What hosts are represented?}
 
 <<fig.width=8, fig.height=3>>=
-cdata %>%
-  ggplot(., aes(x=col_year, fill=host_type)) +
-  geom_bar() +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
-    legend.position = "bottom",
-    legend.title = element_blank()
-  ) +
-  labs(
-    title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
-    x="Year", y="Count"
+diagnostic_time_fill_plot(
+  data,
+  margin_l=0.5,
+  fill="host_type",
+  title="Host samples with collection date"
   )
 
 count_hosts <- data %>%
