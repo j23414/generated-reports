@@ -65,6 +65,27 @@ top_x_author_table <- function(data, top_x=25, authors="authors"){
     )
 }
 
+top_x_field_table <- function(data, top_x=25, field="host"){
+  top_counts <- data %>%
+    mutate(
+      lower_field = tolower(!!sym(field))
+    ) %>%
+    group_by(lower_field) %>%
+    summarise(
+      n = n(),
+    ) %>%
+    arrange(desc(n)) %>%
+    slice_head(n = top_x)
+  
+  kable(
+    top_counts,
+    caption = paste0("Top ",top_x," most frequent ", field)
+  ) %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+}
+
 diagnostic_time_fill_plot <- function(data, margin_l=0.5, fill="region", title="Frequency and proportion"){
   sdata <- data %>%
     subset(., !is.na(date)) %>%
