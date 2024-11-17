@@ -124,9 +124,9 @@ diagnostic_time_fill_plot(
 <<fig.width=8, fig.height=3>>=
 diagnostic_length_plot(
   data=data,
-  approx_length = 7470,
+  approx_length = 7200,
   binwidth = 100,
-  percentage_y = 400
+  percentage_y = 500
 )
 @
 
