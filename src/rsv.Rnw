@@ -1,0 +1,119 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{RSV notes}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+
+<<message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(cowplot)
+@
+
+<<message=FALSE, warning=FALSE>>=
+source("shared_functions.R")
+@
+
+
+\section*{Background}
+
+\section*{Exploratory Graphics}
+
+<<fig.width=8, fig.height=3>>=
+pathogen <- "rsv"
+
+# Download and decompress file
+# TODO: Loop A and B type
+if (!file.exists(paste0(pathogen,"/a/metadata.tsv"))) {
+  system(paste0("mkdir -p ",pathogen,"/a"))
+  file_name <- "metadata.tsv"
+  #zst_file <- paste0(file_name, ".zst")
+  gz_file <- paste0(file_name, ".gz")
+  #url <- paste0("https://data.nextstrain.org/files/workflows/",pathogen,"/a/metadata.tsv.zst")
+  url <- "https://data.nextstrain.org/files/workflows/rsv/a/metadata.tsv.gz"
+  system(paste0("curl -L ", url, " -o ", pathogen,"/a/", gz_file))
+  #system(paste0("zstd -d ",pathogen,"/", zst_file, " -o ", pathogen, "/", file_name))
+  system(paste0("gunzip ", pathogen,"/a/", gz_file))
+}
+
+if (!file.exists(paste0(pathogen,"/b/metadata.tsv"))) {
+  system(paste0("mkdir -p ",pathogen,"/b"))
+  file_name <- "metadata.tsv"
+  gz_file <- paste0(file_name, ".gz")
+  url <- "https://data.nextstrain.org/files/workflows/rsv/b/metadata.tsv.gz"
+  system(paste0("curl -L ", url, " -o ", pathogen,"/b/", gz_file))
+  system(paste0("gunzip ", pathogen,"/b/", gz_file))
+}
+
+data_a <- readr::read_delim(paste0(pathogen,"/a/metadata.tsv"), delim="\t")
+data_b <- readr::read_delim(paste0(pathogen,"/b/metadata.tsv"), delim="\t")
+data<- rbind(data_a,data_b)
+
+@
+
+\section*{NCBI GenBank records}
+
+<<fig.width=8, fig.height=2.5>>=
+# diagnostic_length_plot(
+#   data = data,
+#   approx_length = 12000,
+#   binwidth = 200,
+#   percentage_y = 6000
+# )
+@
+
+<<fig.width=8, fig.height=6>>=
+diagnostic_time_fill_plot(
+  data=data,
+  fill="region"
+)
+@
+
+<<fig.width=8, fig.height=3>>=
+top_x_author_table(
+  data=data,
+  top_x=25,
+  authors="abbr_authors"
+)
+@
+
+<<fig.width=8, fig.height=3>>=
+top_x_field_table(
+  data=data,
+  top_x=25,
+  field="host"
+)
+@
+
+\end{document}
