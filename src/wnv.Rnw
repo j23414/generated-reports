@@ -41,7 +41,6 @@ library(knitr)
 library(kableExtra)
 @
 
-
 \section*{Background}
 
 CDC website: \url{https://www.cdc.gov/west-nile-virus/index.html}
@@ -234,6 +233,36 @@ top_authors <- data %>%
   slice_head(n = top_x)
 
 kable(top_authors, caption = paste("Top ",top_x," most frequent sequence submitters with their region and countries", sep="")) %>%
+  kable_styling(latex_options = c("hold_position", "striped"))
+@
+
+\newpage
+
+\subsection*{What hosts are represented?}
+
+<<fig.width=8, fig.height=3>>=
+cdata %>%
+  ggplot(., aes(x=col_year, fill=host_type)) +
+  geom_bar() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=90, vjust=1, hjust=1),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  labs(
+    title=paste("WNV entries with collection date (n = ",nrow(cdata),")", sep=""),
+    x="Year", y="Count"
+  )
+
+count_hosts <- data %>%
+  group_by(host_type) %>%
+  summarise(
+    n = n(),
+  ) %>%
+  arrange(desc(n))
+
+kable(count_hosts, caption = paste("Host counts", sep="")) %>%
   kable_styling(latex_options = c("hold_position", "striped"))
 @
 
