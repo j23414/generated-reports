@@ -45,9 +45,6 @@ library(cowplot)
 source("shared_functions.R")
 @
 
-
-\section*{Background}
-
 \section*{Exploratory Graphics}
 
 <<fig.width=8, fig.height=3>>=
@@ -76,13 +73,11 @@ if (!file.exists(paste0(pathogen,"/b/metadata.tsv"))) {
   system(paste0("gunzip ", pathogen,"/b/", gz_file))
 }
 
-data_a <- readr::read_delim(paste0(pathogen,"/a/metadata.tsv"), delim="\t")
-data_b <- readr::read_delim(paste0(pathogen,"/b/metadata.tsv"), delim="\t")
+data_a <- readr::read_delim(paste0(pathogen,"/a/metadata.tsv"), delim="\t") %>% mutate(type="A")
+data_b <- readr::read_delim(paste0(pathogen,"/b/metadata.tsv"), delim="\t") %>% mutate(type="B")
 data<- rbind(data_a,data_b)
 
 @
-
-\section*{NCBI GenBank records}
 
 <<fig.width=8, fig.height=2.5>>=
 # diagnostic_length_plot(
@@ -93,10 +88,35 @@ data<- rbind(data_a,data_b)
 # )
 @
 
-<<fig.width=8, fig.height=6>>=
+<<fig.width=8, fig.height=3.5>>=
 diagnostic_time_fill_plot(
   data=data,
-  fill="region"
+  fill="region",
+  title="Across time and geography"
+)
+@
+
+<<fig.width=8, fig.height=2.5>>=
+data %>%
+diagnostic_time_fill_plot(
+  data=.,
+  fill="type",
+  title="RSV Type"
+)
+@
+
+<<fig.width=8, fig.height=2.5>>=
+data %>%
+  mutate(
+    genes=case_when(G_coverage>0.9 & F_coverage > 0.9 ~ "Both",
+                    G_coverage>0.9 ~ "G gene",
+                    F_coverage>0.9 ~ "F gene",
+                    1==1 ~ "Neither")
+  ) %>%
+diagnostic_time_fill_plot(
+  data=.,
+  fill="genes",
+  title="Gene coverage"
 )
 @
 
@@ -115,5 +135,27 @@ top_x_field_table(
   field="host"
 )
 @
+
+\newpage
+
+\subsection*{Lineages}
+
+<<fig.width=8, fig.height=9>>=
+diagnostic_time_fill_plot(
+  data=data,
+  fill="clade",
+  title="Clade"
+)
+@
+
+<<fig.width=8, fig.height=6>>=
+diagnostic_time_fill_plot(
+  data=data,
+  fill="G_clade",
+  title="G clade"
+)
+@
+
+
 
 \end{document}
