@@ -32,15 +32,6 @@
 opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
 @
 
-
-<<message=FALSE, warning=FALSE>>=
-library(tidyverse)
-library(magrittr)
-library(knitr)
-library(kableExtra)
-library(cowplot)
-@
-
 <<message=FALSE, warning=FALSE>>=
 source("shared_functions.R")
 @
@@ -62,8 +53,20 @@ if (!file.exists("nipah/viruses-12-00465-g001-550.jpg")) {
 \includegraphics[width=0.5\textwidth]{nipah/viruses-12-00465-g001-550.jpg}
 
 <<fig.width=8, fig.height=4>>=
+pathogen <- "nipah"
 
-data <- readr::read_delim("~/github/nextstrain/nipah-branches/updates/ingest/results/metadata.tsv", delim="\t")
+# Download and decompress file
+data_file=paste0(pathogen, "/metadata.tsv")
+if (!file.exists(paste0(pathogen,"/metadata.tsv"))) {
+  system(paste0("mkdir -p ",pathogen))
+  file_name <- "metadata.tsv"
+  zst_file <- paste0(file_name, ".zst")
+  url <- paste0("https://data.nextstrain.org/files/workflows/",pathogen,"/metadata.tsv.zst")
+  system(paste0("curl -L ", url, " -o ", pathogen,"/", zst_file))
+  system(paste0("zstd -d ",pathogen,"/", zst_file, " -o ", pathogen, "/", file_name))
+}
+
+data <- readr::read_delim(paste0(pathogen,"/metadata.tsv"), delim="\t")
 @
 
 \section*{NCBI GenBank records}
@@ -85,12 +88,34 @@ diagnostic_time_fill_plot(
 @
 
 <<fig.width=8, fig.height=3>>=
+earliest_records_table(
+  data=data,
+  first=10,
+  date="date",
+  other_fields="accession host country abbr_authors"
+)
+@
+
+\noindent
+"First identified [nipah] during an outbreak in Malaysia in humans and swine in 1998" from Wacharapluesadee, et al, 2021. Two decades of one health surveillance of Nipah virus in Thailand. One Health Outlook, 3, pp.1-14.
+
+
+\noindent
+\textbf{For further reading:}
+\begin{itemize}
+\item Chua, et al, 1999. Fatal encephalitis due to Nipah virus among pig-farmers in Malaysia. The Lancet, 354(9186), pp.1257-1259.
+\end{itemize}
+
+<<fig.width=8, fig.height=3>>=
 top_x_author_table(
   data=data,
   top_x=25,
   authors="abbr_authors"
 )
 @
+
+
+
 
 
 \end{document}

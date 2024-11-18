@@ -5,6 +5,7 @@ library(magrittr)
 library(knitr)
 library(kableExtra)
 library(cowplot)
+library(rlang)
 
 diagnostic_length_plot <- function(data, approx_length=11000, binwidth=200, percentage_y=15000) {
   # Recommended dimensions: fig.width=8, fig.height=3
@@ -125,5 +126,30 @@ diagnostic_time_fill_plot <- function(data, margin_l=0.5, fill="region", title="
       legend.position = "bottom", legend.title = ggplot2::element_blank())
   
   cowplot::plot_grid(a, b, ncol=1, rel_heights = c(5,7))
+}
+
+earliest_records_table <- function(data, first=5, date="date", other_fields="accession region"){
+  other_cols=strsplit(other_fields, " ")[[1]]
+  
+  earliest_table <- data %>%
+    filter(!is.na(!!sym(date))) %>%
+    filter(!!sym(date) != "XXXX-XX-XX") %>%
+    mutate(
+      date_adjusted = lubridate::date(gsub("-XX", "-01", !!sym(date))),
+      col_year = substr(!!sym(date), 1, 4),
+      col_mon = substr(!!sym(date), 6, 7),
+      col_day = substr(!!sym(date), 9, 10)
+    ) %>%
+    arrange(date_adjusted) %>%
+    select(date_adjusted, !!!syms(other_cols)) %>%
+    slice_head(n = first)
+  
+  kable(
+    earliest_table,
+    caption = paste0("Top ", first, " earliest records")
+  ) %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
 }
 
