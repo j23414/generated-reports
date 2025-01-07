@@ -58,7 +58,7 @@ if (!file.exists("wnv/metadata.tsv")) {
   system("mkdir -p wnv")
   file_name <- "metadata.tsv"
   zst_file <- paste0(file_name, ".zst")
-  url <- paste0("https://data.nextstrain.org/files/workflows/wnv/metadata.tsv.zst")
+  url <- paste0("https://data.nextstrain.org/files/workflows/WNV/metadata.tsv.zst")
   system(paste0("curl -L ", url, " -o ", "wnv/", zst_file))
   system(paste0("zstd -d wnv/", zst_file, " -o wnv/", file_name))
 }

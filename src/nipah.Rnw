@@ -99,7 +99,6 @@ earliest_records_table(
 \noindent
 "First identified [nipah] during an outbreak in Malaysia in humans and swine in 1998" from Wacharapluesadee, et al, 2021. Two decades of one health surveillance of Nipah virus in Thailand. One Health Outlook, 3, pp.1-14.
 
-
 \noindent
 \textbf{For further reading:}
 \begin{itemize}
@@ -113,9 +112,5 @@ top_x_author_table(
   authors="abbr_authors"
 )
 @
-
-
-
-
 
 \end{document}

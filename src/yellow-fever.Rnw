@@ -32,15 +32,6 @@
 opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
 @
 
-
-<<message=FALSE, warning=FALSE>>=
-library(tidyverse)
-library(magrittr)
-library(knitr)
-library(kableExtra)
-library(cowplot)
-@
-
 <<message=FALSE, warning=FALSE>>=
 source("shared_functions.R")
 @
@@ -89,7 +80,7 @@ diagnostic_time_fill_plot(
 top_x_author_table(
   data=data,
   top_x=25,
-  authors="abbr_authors"
+  authors="authors"
 )
 @
 
