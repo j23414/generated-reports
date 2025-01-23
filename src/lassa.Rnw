@@ -122,12 +122,29 @@ diagnostic_time_fill_plot(
 @
 
 <<fig.width=8, fig.height=3>>=
+# Add a second set of min-length filters for S segment
+s_length <- 3400
+perc_length <- c(1.0, 0.90, 0.8, 0.75, 0.70)*s_length
+binwidth=100
+percentage_y = 500
+
+# Pass in the min-length filters for L segment
 diagnostic_length_plot(
   data=data,
   approx_length = 7200,
-  binwidth = 100,
-  percentage_y = 500
-)
+  binwidth = binwidth,
+  percentage_y = percentage_y
+) +
+  ggplot2::geom_vline(xintercept = perc_length, linetype = "dashed", color = "red") +
+    ggplot2::annotate("text",
+             x = perc_length + binwidth*1.5,
+             y = rep(percentage_y, 5),
+             label = paste0(round(perc_length), " (", c(100, 90, 80, 75, 70), "%)"),
+             hjust = -0.1,
+             angle = -90,
+             size = 3,
+             color = "darkgreen"
+    )
 @
 
 <<fig.width=8, fig.height=4>>=
