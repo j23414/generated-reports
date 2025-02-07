@@ -1,0 +1,87 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Ebola notes}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+<<message=FALSE, warning=FALSE>>=
+source("shared_functions.R")
+@
+
+\section*{Background}
+
+\section*{Exploratory Graphics}
+
+<<fig.width=8, fig.height=3>>=
+pathogen <- "ebola"
+
+# Download and decompress file
+data_file=paste0(pathogen, "/metadata.tsv")
+if (!file.exists(paste0(pathogen, "/metadata.tsv"))) {
+  system(paste("mkdir -p ", pathogen, sep=""))
+  file_name <- "metadata.tsv"
+  zst_file <- paste0(file_name, ".zst")
+  url <- paste0("https://data.nextstrain.org/files/workflows/", pathogen, "/metadata.tsv.zst")
+  system(paste0("curl -L ", url, " -o ", pathogen,"/", zst_file))
+  system(paste0("zstd -d ", pathogen, "/", zst_file, " -o ", pathogen, "/", file_name))
+}
+
+data <- readr::read_delim(paste0(pathogen, "/metadata.tsv"), delim="\t")
+@
+
+\section*{NCBI GenBank records}
+
+<<fig.width=8, fig.height=2.5>>=
+diagnostic_length_plot(
+  data = data,
+  approx_length = 19000,
+  binwidth = 200,
+  percentage_y = 750
+)
+@
+
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot(
+  data=data,
+  fill="region"
+)
+@
+
+<<fig.width=8, fig.height=3>>=
+top_x_author_table(
+  data=data,
+  top_x=25,
+  authors="authors"
+)
+@
+
+
+\end{document}
