@@ -64,14 +64,14 @@ diagnostic_length_plot(
   data = data,
   approx_length = 19000,
   binwidth = 200,
-  percentage_y = 750
+  percentage_y = 1500
 )
 @
 
 <<fig.width=8, fig.height=4>>=
 diagnostic_time_fill_plot(
   data=data,
-  fill="region"
+  fill="country"
 )
 @
 
@@ -80,6 +80,15 @@ top_x_author_table(
   data=data,
   top_x=25,
   authors="authors"
+)
+@
+
+<<fig.width=8, fig.height=3>>=
+earliest_records_table(
+  data=data,
+  first=20,
+  date="date",
+  other_fields="accession host country authors"
 )
 @
 
