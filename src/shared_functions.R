@@ -87,7 +87,7 @@ top_x_field_table <- function(data, top_x=25, field="host"){
     )
 }
 
-diagnostic_time_fill_plot <- function(data, margin_l=0.5, fill="region", title="Frequency and proportion"){
+diagnostic_time_fill_plot <- function(data, margin_l=0.5, fill="region", title="Frequency and proportion", rel_heights = c(5,7)){
   sdata <- data %>%
     subset(., !is.na(date)) %>%
     subset(., date !="XXXX-XX-XX") %>%
@@ -125,7 +125,7 @@ diagnostic_time_fill_plot <- function(data, margin_l=0.5, fill="region", title="
       axis.title.x = ggplot2::element_blank(), axis.title.y=ggplot2::element_blank(),
       legend.position = "bottom", legend.title = ggplot2::element_blank())
   
-  cowplot::plot_grid(a, b, ncol=1, rel_heights = c(5,7))
+  cowplot::plot_grid(a, b, ncol=1, rel_heights = rel_heights)
 }
 
 earliest_records_table <- function(data, first=5, date="date", other_fields="accession region"){
