@@ -128,6 +128,105 @@ diagnostic_time_fill_plot <- function(data, margin_l=0.5, fill="region", title="
   cowplot::plot_grid(a, b, ncol=1, rel_heights = rel_heights)
 }
 
+diagnostic_time_fill_plot_month <- function(data, margin_l=0.5, fill="region", title="Frequency and proportion", rel_heights = c(5,7)){
+  sdata <- data %>%
+    subset(., !is.na(date)) %>%
+    subset(., date !="XXXX-XX-XX") %>%
+    dplyr::mutate(
+      date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+      col_year = substr(date, 1, 4),
+      col_mon = substr(date, 6, 7),
+      col_day = substr(date, 9, 10),
+      col_quarter = case_when(
+        col_mon %in% c("01", "02", "03") ~ "Q1",
+        col_mon %in% c("04", "05", "06") ~ "Q2",
+        col_mon %in% c("07", "08", "09") ~ "Q3",
+        col_mon %in% c("10", "11", "12") ~ "Q4",
+        TRUE ~ col_mon
+      ),
+      year_mon = paste(col_year, col_mon, sep=":")
+    ) %>%
+    dplyr::group_by(!!sym(fill), year_mon) %>%
+    dplyr::summarise(
+      n=n()
+    ) %>%
+    dplyr::ungroup(.)
+  
+  n=sum(sdata$n)
+  
+  a <- sdata %>%
+    ggplot2::ggplot(., ggplot2::aes(x=year_mon, y=n, fill=!!sym(fill))) +
+    ggplot2::geom_bar(stat="identity", position="stack") +
+    ggplot2::theme_bw() + 
+    ggplot2::theme(axis.text.x = ggplot2::element_blank(),
+                   axis.title.x=ggplot2::element_blank(), axis.title.y=ggplot2::element_blank(),
+                   legend.position = "none",
+                   plot.margin = margin(l=margin_l,r=0.23,unit="cm"))+
+    ggplot2::labs(title=paste(title," (n=", n, ")", sep=""))
+  
+  b <- sdata %>%
+    ggplot2::ggplot(., ggplot2::aes(x=year_mon, y=n, fill=!!sym(fill))) +
+    ggplot2::geom_bar(stat="identity", position="fill") +
+    ggplot2::scale_y_continuous(labels = scales::percent) +
+    ggplot2::theme_bw() + 
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_text(angle=90, vjust=1, hjust=1, size=6), 
+      axis.title.x = ggplot2::element_blank(), axis.title.y=ggplot2::element_blank(),
+      legend.position = "bottom", legend.title = ggplot2::element_blank())
+  
+  cowplot::plot_grid(a, b, ncol=1, rel_heights = rel_heights)
+}
+
+
+diagnostic_time_fill_plot_quarter <- function(data, margin_l=0.5, fill="region", title="Frequency and proportion", rel_heights = c(5,7)){
+  sdata <- data %>%
+    subset(., !is.na(date)) %>%
+    subset(., date !="XXXX-XX-XX") %>%
+    dplyr::mutate(
+      date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+      col_year = substr(date, 1, 4),
+      col_mon = substr(date, 6, 7),
+      col_day = substr(date, 9, 10),
+      col_quarter = case_when(
+        col_mon %in% c("01", "02", "03") ~ "Q1",
+        col_mon %in% c("04", "05", "06") ~ "Q2",
+        col_mon %in% c("07", "08", "09") ~ "Q3",
+        col_mon %in% c("10", "11", "12") ~ "Q4",
+        TRUE ~ col_mon
+      ),
+      year_mon = paste(col_year, col_quarter, sep=":")
+    ) %>%
+    dplyr::group_by(!!sym(fill), year_mon) %>%
+    dplyr::summarise(
+      n=n()
+    ) %>%
+    dplyr::ungroup(.)
+  
+  n=sum(sdata$n)
+  
+  a <- sdata %>%
+    ggplot2::ggplot(., ggplot2::aes(x=year_mon, y=n, fill=!!sym(fill))) +
+    ggplot2::geom_bar(stat="identity", position="stack") +
+    ggplot2::theme_bw() + 
+    ggplot2::theme(axis.text.x = ggplot2::element_blank(),
+                   axis.title.x=ggplot2::element_blank(), axis.title.y=ggplot2::element_blank(),
+                   legend.position = "none",
+                   plot.margin = margin(l=margin_l,r=0.23,unit="cm"))+
+    ggplot2::labs(title=paste(title," (n=", n, ")", sep=""))
+  
+  b <- sdata %>%
+    ggplot2::ggplot(., ggplot2::aes(x=year_mon, y=n, fill=!!sym(fill))) +
+    ggplot2::geom_bar(stat="identity", position="fill") +
+    ggplot2::scale_y_continuous(labels = scales::percent) +
+    ggplot2::theme_bw() + 
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_text(angle=90, vjust=1, hjust=1, size=6), 
+      axis.title.x = ggplot2::element_blank(), axis.title.y=ggplot2::element_blank(),
+      legend.position = "bottom", legend.title = ggplot2::element_blank())
+  
+  cowplot::plot_grid(a, b, ncol=1, rel_heights = rel_heights)
+}
+
 earliest_records_table <- function(data, first=5, date="date", other_fields="accession region"){
   other_cols=strsplit(other_fields, " ")[[1]]
   

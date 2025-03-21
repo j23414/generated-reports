@@ -89,6 +89,28 @@ diagnostic_time_fill_plot(
   )
 @
 
+\newpage
+
+\subsection*{Pick a narrow bandwidth for the frequencies plot}
+
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot_month(
+  subset(data, date > "2002-01-01"),
+  margin_l=0.5,
+  fill="region",
+  title="Monthly counts"
+  )
+@
+
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot_quarter(
+  subset(data, date > "2002-01-01"),
+  margin_l=0.5,
+  fill="region",
+  title="Quarterly counts"
+  )
+@
+
 The earliest samples seem to be from 1931. However, these are EF631122 and EF631123 and are supposedly collected in Illinois, USA, much earlier than the NY99 event. We might need to dig into publications that contain these GenBanks to check if this collection date is correct. Such as publication:
 
 \begin{itemize}
@@ -139,7 +161,7 @@ If min length is set to 80 percent, or 8800nt:
 <<fig.width=8, fig.height=3>>=
 min_length <- 8800
 
-filtered <- data %>% 
+filtered <- data %>%
   subset(., length>min_length)
 @
 
@@ -149,7 +171,7 @@ data %>%
   mutate(is_high = country %in% c("USA", "Italy")) %>%
   #subset(., country != "USA") %>%
   mutate(filter=length>min_length) %>%
-  ggplot(., aes(x=country, fill=filter)) + 
+  ggplot(., aes(x=country, fill=filter)) +
   geom_bar() +
   theme_bw() +
   theme(
