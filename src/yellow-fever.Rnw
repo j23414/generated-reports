@@ -76,6 +76,14 @@ diagnostic_time_fill_plot(
 )
 @
 
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot(
+  data=data,
+  fill="clade",
+  title="Clade"
+)
+@
+
 <<fig.width=8, fig.height=3>>=
 top_x_author_table(
   data=data,
