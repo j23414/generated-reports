@@ -252,3 +252,29 @@ earliest_records_table <- function(data, first=5, date="date", other_fields="acc
     )
 }
 
+
+latest_records_table <- function(data, last=5, date="date", other_fields="accession region"){
+  other_cols=strsplit(other_fields, " ")[[1]]
+  
+  earliest_table <- data %>%
+    filter(!is.na(!!sym(date))) %>%
+    filter(!!sym(date) != "XXXX-XX-XX") %>%
+    mutate(
+      date_adjusted = lubridate::date(gsub("-XX", "-01", !!sym(date))),
+      col_year = substr(!!sym(date), 1, 4),
+      col_mon = substr(!!sym(date), 6, 7),
+      col_day = substr(!!sym(date), 9, 10)
+    ) %>%
+    arrange(date_adjusted) %>%
+    select(date_adjusted, !!!syms(other_cols)) %>%
+    slice_tail(n = last)
+  
+  kable(
+    earliest_table,
+    caption = paste0("Top ", last, " latest records")
+  ) %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+}
+

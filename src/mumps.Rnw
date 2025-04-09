@@ -76,12 +76,8 @@ diagnostic_time_fill_plot(
 @
 
 <<fig.width=8, fig.height=4>>=
-data %>%
-  mutate(
-    MuV_genotype=gsub("Mumps virus genotype ","", MuV_genotype)
-  ) %>%
 diagnostic_time_fill_plot(
-  data=.,
+  data=data,
   fill="MuV_genotype",
   title="MuV Genotype",
   rel_heights = c(2.5,7)
@@ -101,7 +97,16 @@ earliest_records_table(
   data=data,
   first=20,
   date="date",
-  other_fields="accession host country authors"
+  other_fields="accession strain country authors"
+)
+@
+
+<<fig.width=8, fig.height=3>>=
+latest_records_table(
+  data=data,
+  last=20,
+  date="date",
+  other_fields="accession strain country authors"
 )
 @
 
