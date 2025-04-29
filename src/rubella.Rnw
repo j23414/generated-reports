@@ -101,5 +101,13 @@ latest_records_table(
 )
 @
 
+\section{How many rubella samples are missing strain name?}
+
+<<echo=TRUE>>=
+(number_missing_strian_name = data %>% subset(strain == accession) %>% nrow(.))
+(total_rubella_records = nrow(data))
+(percentage_missing = number_missing_strian_name/total_rubella_records)
+@
+
 
 \end{document}
