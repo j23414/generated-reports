@@ -84,6 +84,65 @@ diagnostic_time_fill_plot(
 )
 @
 
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot(
+  data=data,
+  fill="MuV_genotype_nextclade",
+  title="MuV Genotype_nextclade",
+  rel_heights = c(2.5,7)
+)
+@
+
+\newpage
+\section*{Nextclade dataset}
+
+<<fig.width=5, fig.height=5>>=
+# Pivot Table comparing MuV_genotype and MuV_genotype_nextclade columns
+pivot <- data %>%
+  count(MuV_genotype, MuV_genotype_nextclade) %>%
+  complete(MuV_genotype, MuV_genotype_nextclade, fill = list(n = 0)) %>%
+  mutate(
+    log_n = ifelse(n > 0, log10(n), NA),
+    MuV_genotype = case_when(is.na(MuV_genotype) ~ "NA",
+                             TRUE ~ MuV_genotype),
+    MuV_genotype = fct_rev(factor(MuV_genotype))
+  )
+
+# Plot
+ggplot(pivot, aes(x = MuV_genotype_nextclade, y = MuV_genotype, fill = log_n)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = ifelse(n > 0, as.character(n), "")), color = "black", size = 3) +
+  scale_fill_gradient(
+    low = "white", high = "orange",
+    na.value = "white"
+  ) +
+  scale_y_discrete(name = "Original MuV Genotype from GenBank") +
+  scale_x_discrete(name = "Nextclade MuV Genotype results", position = "top") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 0, vjust = 0.5),
+  )
+@
+
+<<>>=
+mismatch <- data %>%
+  subset(MuV_genotype != MuV_genotype_nextclade) %>%
+  subset(!(MuV_genotype %in% c("G1", "G2") & MuV_genotype_nextclade %in% c("G"))) %>%
+  subset(!(MuV_genotype %in% c("H1", "H2") & MuV_genotype_nextclade %in% c("H"))) %>%
+  subset(!(MuV_genotype %in% c("K/M", "M") & MuV_genotype_nextclade %in% c("K"))) %>%
+  select(c("accession", "strain","length", "genotype", "MuV_genotype", "MuV_genotype_nextclade")) %>%
+  arrange(MuV_genotype)
+
+kable(mismatch, caption = "Mismatched Genotype between GenBank and Nextclade datasets") %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+
+@
+
+\newpage
+
 <<fig.width=8, fig.height=3>>=
 top_x_author_table(
   data=data,
