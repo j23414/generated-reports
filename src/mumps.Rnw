@@ -158,6 +158,7 @@ kable(mismatch, caption = "Mismatched Genotype between GenBank and Nextclade dat
       latex_options = c("hold_position", "striped")
     )
 
+readr::write_delim(mismatch, file="mumps/mismatch_sh.tsv", delim="\t")
 @
 
 
@@ -198,14 +199,14 @@ mismatch <- data %>%
   subset(!(MuV_genotype %in% c("K/M", "M") & MuV_genotype_nextclade_genome %in% c("K"))) %>%
   select(c("accession", "strain","length", "MuV_genotype",  "MuV_genotype_nextclade_sh", "MuV_genotype_nextclade_genome")) %>%
   arrange(MuV_genotype) %>%
-  rename(., SH=MuV_genotype_nextclade_sh, Genome=MuV_genotype_nextclade_genome) %>%
-  head(n=10)
+  rename(., SH=MuV_genotype_nextclade_sh, Genome=MuV_genotype_nextclade_genome) 
 
-kable(mismatch, caption = "Mismatched Genotype between GenBank and Nextclade datasets") %>%
+kable(head(mismatch, n=10), caption = "Mismatched Genotype between GenBank and Nextclade datasets") %>%
     kable_styling(
       latex_options = c("hold_position", "striped")
     )
 
+readr::write_delim(mismatch, file="mumps/mismatch_genome.tsv", delim="\t")
 @
 
 
@@ -247,15 +248,56 @@ mismatch <- data %>%
   subset(!(MuV_genotype %in% c("K/M", "M") & MuV_genotype_nextclade_genomesample %in% c("K"))) %>%
   select(c("accession", "strain","length", "MuV_genotype", "MuV_genotype_nextclade_sh", "MuV_genotype_nextclade_genome", "MuV_genotype_nextclade_genomesample")) %>%
   rename(., SH=MuV_genotype_nextclade_sh, Genome=MuV_genotype_nextclade_genome, GenomeSample=MuV_genotype_nextclade_genomesample ) %>%
-  arrange(MuV_genotype) %>%
-  head(n=10)
+  arrange(MuV_genotype) 
 
-kable(mismatch, caption = "Mismatched Genotype between GenBank and Nextclade datasets") %>%
+kable(head(mismatch, n=10), caption = "Mismatched Genotype between GenBank and Nextclade datasets") %>%
     kable_styling(
       latex_options = c("hold_position", "striped")
     )
 
+readr::write_delim(mismatch, file="mumps/mismatch_genomesample.tsv", delim="\t")
+
 @
+
+\newpage
+
+\section*{Debugging Nextclade Assignments}
+
+<<eval=FALSE, echo=TRUE>>=
+nextstrain shell .
+
+#export BUILD=sh
+#export METADATA_COLUMNS="strain,MuV_genotype,SH,length"
+#export BUILD=genome
+#export METADATA_COLUMNS="strain,MuV_genotype,SH,Genome,length"
+export BUILD=genomesample
+export METADATA_COLUMNS="strain,MuV_genotype,SH,Genome,GenomeSample,length"
+
+augur filter \
+  --metadata mumps/mismatch_${BUILD}.tsv \
+  --metadata-id-columns accession \
+  --sequences ~/Desktop/MUMPS/mumps/ingest/results/sequences.fasta \
+  --output-sequences mumps/mismatch_${BUILD}_raw.fasta
+
+python ~/github/j23414/basic-phylogenetic-pipeline/bin/annotate_header.py \
+  --metadata mumps/mismatch_${BUILD}.tsv \
+  --metadata-columns ${METADATA_COLUMNS} \
+  --sequences mumps/mismatch_${BUILD}_raw.fasta \
+  > mumps/mismatch_${BUILD}.fasta
+
+nextclade3 run \
+  mumps/mismatch_${BUILD}.fasta \
+  --input-dataset ~/github/nextstrain/mumps-branches/add-nextclade-workflow-wgs/nextclade_data/${BUILD} \
+  --output-tsv mumps/nextclade_${BUILD}.tsv \
+  --output-fasta mumps/nextclade_${BUILD}.fasta \
+  --silent
+@
+
+\includegraphics[width=1\textwidth]{mumps/2025-05-20_geneious_nextclade_genomesample.png}
+
+\begin{itemize}
+\item{Mis-assignments seem to be in the gap between V/P and M gene (weird indel), SH region for Genotype I, and HN gene.}
+\end{itemize}
 
 \newpage
 
@@ -284,6 +326,5 @@ latest_records_table(
   other_fields="accession strain country authors"
 )
 @
-
 
 \end{document}
