@@ -259,6 +259,7 @@ readr::write_delim(mismatch, file="mumps/mismatch_genomesample.tsv", delim="\t")
 
 @
 
+
 \newpage
 
 \section*{Debugging Nextclade Assignments}
@@ -297,7 +298,94 @@ nextclade3 run \
 
 \begin{itemize}
 \item{Mis-assignments seem to be in the gap between V/P and M gene (weird indel), SH region for Genotype I, and HN gene.}
+\item{Dragged mis-assignments onto Nextclade tree, see figures below}
 \end{itemize}
+
+\includegraphics[width=1\textwidth]{mumps/false_A.png}
+
+<<>>=
+one <- data %>%
+  subset(grepl("MuVs/Middelburg.NLD/33.18", strain)) %>%
+  select(c("accession", "strain","length", "MuV_genotype", "MuV_genotype_nextclade_sh", "MuV_genotype_nextclade_genome", "MuV_genotype_nextclade_genomesample")) %>%
+  rename(., SH=MuV_genotype_nextclade_sh, Genome=MuV_genotype_nextclade_genome, GenomeSample=MuV_genotype_nextclade_genomesample ) %>%
+  arrange(length)
+
+kable(one, caption = "For same strain, different segment genotype calls") %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+@
+
+\includegraphics[width=1\textwidth]{mumps/one.png}
+
+<<>>=
+two <- data %>%
+  subset(grepl("MuVs/Gelderland.NLD/32.19", strain)) %>%
+  select(c("accession", "strain","length", "MuV_genotype", "MuV_genotype_nextclade_sh", "MuV_genotype_nextclade_genome", "MuV_genotype_nextclade_genomesample")) %>%
+  rename(., SH=MuV_genotype_nextclade_sh, Genome=MuV_genotype_nextclade_genome, GenomeSample=MuV_genotype_nextclade_genomesample ) %>%
+  arrange(length)
+
+kable(two, caption = "For same strain, different segment genotype calls") %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+@
+
+\includegraphics[width=1\textwidth]{mumps/two.png}
+
+\newpage
+\newpage
+
+\section* {Add an outgroup}
+
+
+<<fig.width=5, fig.height=5>>=
+# Pivot Table comparing MuV_genotype and MuV_genotype_nextclade columns
+pivot <- data %>%
+  count(MuV_genotype, MuV_genotype_nextclade_genomesampleoutgroup) %>%
+  complete(MuV_genotype, MuV_genotype_nextclade_genomesampleoutgroup, fill = list(n = 0)) %>%
+  mutate(
+    log_n = ifelse(n > 0, log10(n), NA),
+    MuV_genotype = case_when(is.na(MuV_genotype) ~ "NA",
+                             TRUE ~ MuV_genotype),
+    MuV_genotype = fct_rev(factor(MuV_genotype))
+  )
+
+# Plot
+ggplot(pivot, aes(x = MuV_genotype_nextclade_genomesampleoutgroup, y = MuV_genotype, fill = log_n)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = ifelse(n > 0, as.character(n), "")), color = "black", size = 3) +
+  scale_fill_gradient(
+    low = "white", high = "orange",
+    na.value = "white"
+  ) +
+  scale_y_discrete(name = "Original MuV Genotype from GenBank") +
+  scale_x_discrete(name = "Nextclade MuV Genotype Genome Sampled with Outgroup results", position = "top") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=0),
+  )
+@
+
+<<>>=
+mismatch <- data %>%
+  subset(MuV_genotype != MuV_genotype_nextclade_genomesampleoutgroup) %>%
+  subset(!(MuV_genotype %in% c("G1", "G2") & MuV_genotype_nextclade_genomesampleoutgroup %in% c("G"))) %>%
+  subset(!(MuV_genotype %in% c("H1", "H2") & MuV_genotype_nextclade_genomesampleoutgroup %in% c("H"))) %>%
+  subset(!(MuV_genotype %in% c("K/M", "M") & MuV_genotype_nextclade_genomesampleoutgroup %in% c("K"))) %>%
+  select(c("accession", "strain","length", "MuV_genotype", "MuV_genotype_nextclade_sh", "MuV_genotype_nextclade_genome", "MuV_genotype_nextclade_genomesample", "MuV_genotype_nextclade_genomesampleoutgroup")) %>%
+  rename(., SH=MuV_genotype_nextclade_sh, Genome=MuV_genotype_nextclade_genome, GenomeSample=MuV_genotype_nextclade_genomesample, GenomeSampleOutgroup=MuV_genotype_nextclade_genomesampleoutgroup ) %>%
+  arrange(MuV_genotype) 
+
+kable(mismatch, caption = "Mismatched Genotype between GenBank and Nextclade datasets") %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+
+readr::write_delim(mismatch, file="mumps/mismatch_genomesampleoutgroup.tsv", delim="\t")
+
+@
 
 \newpage
 
