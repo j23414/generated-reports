@@ -6,6 +6,7 @@ Notes roughly grouped by similarity
 
 * [Measles](reports/measles.pdf)
 * [Mumps](reports/mumps.pdf)
+    * [Mumps Nextclade](reports/mumps-nextclade.pdf)
 * [Rubella](reports/rubella.pdf)
 
 **Arboviruses**
@@ -19,6 +20,7 @@ Notes roughly grouped by similarity
 **Arenaviruses**
 
 * [Lassa](reports/lassa.pdf)
+    * [Lassa Nextclade](reports/lassa-nextclade.pdf)
 
 **Respiratory viruses**
 
