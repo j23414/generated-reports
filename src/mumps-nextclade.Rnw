@@ -22,7 +22,7 @@
 
 \usepackage{fancyhdr}
 \pagestyle{fancy}
-\lhead{Mumps notes}
+\lhead{Mumps notes: Nextclade}
 \rhead{last update: \today}
 
 \begin{document}
@@ -36,9 +36,7 @@ opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align
 source("shared_functions.R")
 @
 
-\section*{Background}
-
-\section*{Exploratory Graphics}
+\section*{Nextclade Result Parameter Diagnostic Plots}
 
 <<fig.width=8, fig.height=3>>=
 pathogen <- "mumps"
@@ -57,16 +55,20 @@ if (!file.exists(paste0(pathogen, "/metadata.tsv"))) {
 data <- readr::read_delim(paste0(pathogen, "/metadata.tsv"), delim="\t")
 @
 
-\section*{NCBI GenBank records}
+\subsection*{Full Genome}
 
-<<fig.width=8, fig.height=2.5>>=
+<<fig.width=8, fig.height=2>>=
 diagnostic_length_plot(
   data = data,
   approx_length = 15384,
   binwidth = 200,
   percentage_y = 9000
 )
+@
 
+\subsection*{SH Region}
+
+<<fig.width=8, fig.height=2>>=
 diagnostic_length_plot(
   data = data %>% subset(length<500),
   approx_length = 315,
@@ -75,12 +77,80 @@ diagnostic_length_plot(
 )
 @
 
-\section*{SH gene}
+\section*{Nextclade compared with GenBank annotations:}
 
+<<fig.width=8, fig.height=4>>=
+# Pivot Table comparing MuV_genotype and MuV_genotype_nextclade columns
+pivot <- data %>%
+  count(MuV_genotype, MuV_genotype_nextclade_sh) %>%
+  complete(MuV_genotype, MuV_genotype_nextclade_sh, fill = list(n = 0)) %>%
+  mutate(
+    log_n = ifelse(n > 0, log10(n), NA),
+    MuV_genotype = case_when(is.na(MuV_genotype) ~ "NA",
+                             TRUE ~ MuV_genotype),
+    MuV_genotype = fct_rev(factor(MuV_genotype))
+  )
+
+# Plot
+sh_plot <- ggplot(pivot, aes(x = MuV_genotype_nextclade_sh, y = MuV_genotype, fill = log_n)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = ifelse(n > 0, as.character(n), "")), color = "black", size = 3) +
+  scale_fill_gradient(
+    low = "white", high = "orange",
+    na.value = "white"
+  ) +
+  scale_y_discrete(name = "Original MuV Genotype from GenBank") +
+  scale_x_discrete(name = "Nextclade MuV Genotype SH results", position = "top") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0),
+  )
+
+
+# Pivot Table comparing MuV_genotype and MuV_genotype_nextclade columns
+pivot <- data %>%
+  count(MuV_genotype, MuV_genotype_nextclade_genome) %>%
+  complete(MuV_genotype, MuV_genotype_nextclade_genome, fill = list(n = 0)) %>%
+  mutate(
+    log_n = ifelse(n > 0, log10(n), NA),
+    MuV_genotype = case_when(is.na(MuV_genotype) ~ "NA",
+                             TRUE ~ MuV_genotype),
+    MuV_genotype = fct_rev(factor(MuV_genotype))
+  )
+
+# Plot
+genome_plot <- ggplot(pivot, aes(x = MuV_genotype_nextclade_genome, y = MuV_genotype, fill = log_n)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = ifelse(n > 0, as.character(n), "")), color = "black", size = 3) +
+  scale_fill_gradient(
+    low = "white", high = "orange",
+    na.value = "white"
+  ) +
+  scale_y_discrete(name = "Original MuV Genotype from GenBank") +
+  scale_x_discrete(name = "Nextclade MuV Genotype Genome results", position = "top") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0),
+  )
+
+cowplot::plot_grid(sh_plot, genome_plot, ncol=2)
+@
+
+\newpage
+
+\section*{SH gene Nextclade Dataset}
+
+\noindent
 \textbf{Missing Data}
 
+<<echo=TRUE, eval=FALSE>>=
+--scoreBias 300                # First 300 not penalized
+--missingDataThreshold 3000    # Top threshold, scale the next set of missing data from 0 to 100
+@
 
-<<fig.width=8, fig.height=2.5>>=
+<<fig.width=4, fig.height=2>>=
 SH_NEXTCLADE='~/Desktop/debug/fixup-config-and-logs/ingest/results/sh/nextclade.tsv'
 
 data <- readr::read_delim(SH_NEXTCLADE, delim="\t")
@@ -94,44 +164,180 @@ data %>%
   theme_bw()
 @
 
+\noindent
+Since this is the SH gene (~315nt), we do not reach past the 300 minimum.
 
+\noindent
 \textbf{Mixed Sites (M)}
 
-<<fig.width=8, fig.height=2.5>>=
+<<echo=TRUE, eval=FALSE>>=
+--mixedSitesThreshold 10 # More than this number of mixed sites results in a "bad" score
+@
+
+<<fig.width=4, fig.height=1.5>>=
 data %>%
   ggplot(. , aes(x=clade, y=totalNonACGTNs)) +
   geom_violin() +
   geom_boxplot() +
-  theme_bw()
+  theme_bw() +
+  labs(title="totalNonACGTNs", y="")
 @
 
+\noindent
+Well below the 10 threshold (but once again this is for a reference that is 315nt long).
+
+\newpage
+\noindent
 \textbf{Private Mutations}
 
-<<fig.width=8, fig.height=2.5>>=
-data %>%
+<<echo=TRUE, eval=FALSE>>=
+    "privateMutations": {
+      "enabled": true,
+      "typical": 8,
+      "cutoff": 24,
+      "weightLabeledSubstitutions": 4,
+      "weightReversionSubstitutions": 6,
+      "weightUnlabeledSubstitutions": 1
+    },
+@
+
+<<fig.width=8, fig.height=3.5>>=
+a_plot <- data %>%
   ggplot(. , aes(x=clade, y=privateNucMutations.totalLabeledSubstitutions)) +
   geom_violin() +
   geom_boxplot() +
-  theme_bw()
+  theme_bw() +
+  labs(title="privateNucMutations.totalLabeledSubstitutions", y="")
 
-data %>%
+b_plot <- data %>%
   ggplot(. , aes(x=clade, y=privateNucMutations.totalUnlabeledSubstitutions)) +
   geom_violin() +
   geom_boxplot() +
-  theme_bw()
+  theme_bw() +
+  labs(title="privateNucMutations.totalUnlabeledSubstitutions", y="")
 
-data %>%
+c_plot <- data %>%
   ggplot(. , aes(x=clade, y=privateNucMutations.totalReversionSubstitutions)) +
   geom_violin() +
   geom_boxplot() +
-  theme_bw()
+  theme_bw() +
+  labs(title="privateNucMutations.totalReversionSubstitutions", y="")
 
-data %>%
+d_plot <- data %>%
   ggplot(. , aes(x=clade, y=privateNucMutations.totalPrivateSubstitutions)) +
   geom_violin() +
   geom_boxplot() +
-  theme_bw()
+  theme_bw() +
+  labs(title="privateNucMutations.totalPrivateSubstitutions", y="")
+
+cowplot::plot_grid(a_plot, b_plot, c_plot, d_plot, ncol=2)
 @
+
+\noindent
+\textbf{Mutation clusters}
+
+<<eval=FALSE, echo=TRUE>>=
+    "snpClusters": {
+      "enabled": true,
+      "windowSize": 100,
+      "clusterCutOff": 6,
+      "scoreWeight": 50
+    },
+@
+
+<<fig.width=8, fig.height=3.5>>=
+a_plot <- data %>%
+  ggplot(. , aes(x=clade, y=totalSubstitutions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalSubstitutions", y="")
+b_plot <- data %>%
+  ggplot(. , aes(x=clade, y=totalAminoacidSubstitutions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalAminoacidSubstitutions", y="")
+c_plot <- data %>%
+  ggplot(. , aes(x=clade, y=totalAminoacidInsertions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalAminoacidInsertions", y="")
+d_plot <- data %>%
+  ggplot(. , aes(x=clade, y=totalAminoacidDeletions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalAminoacidDeletions", y="")
+cowplot::plot_grid(a_plot, b_plot, c_plot, d_plot, ncol=2)
+@
+
+
+\newpage
+\noindent
+\textbf{Stop Codons}
+
+<<eval=FALSE,echo=TRUE>>=
+"stopCodons": {
+      "enabled": true,
+      "ignoredStopCodons": [
+        {
+          "geneName": "ORF8",
+          "codon": 26
+        },
+        {
+          "geneName": "ORF8",
+          "codon": 67
+        }
+      ]
+}
+@
+
+<<fig.width=8, fig.height=2>>=
+data %>%
+  ggplot(. , aes(x=clade, y=qc.stopCodons.totalStopCodons)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="qc.stopCodons.totalStopCodons", y="")
+@
+
+
+\noindent
+\textbf{Frameshifts}
+
+<<eval=FALSE,echo=TRUE>>=
+    "frameShifts": {
+      "enabled": true,
+      "ignoredFrameShifts": [
+        {
+          "geneName": "ORF3a",
+          "codonRange": {
+            "begin": 256,
+            "end": 276
+          }
+        },
+        {
+          "geneName": "ORF3a",
+          "codonRange": {
+            "begin": 258,
+            "end": 276
+          }
+        }
+      ]
+    },
+@
+
+<<fig.width=8, fig.height=2>>=
+data %>%
+  ggplot(. , aes(x=clade, y=totalFrameShifts)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalFrameShifts", y="")
+@
+
 
 
 
