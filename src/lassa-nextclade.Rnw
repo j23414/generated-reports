@@ -1,0 +1,304 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Lassa notes: Nextclade}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+
+<<message=FALSE, warning=FALSE>>=
+source("shared_functions.R")
+@
+
+
+\section*{Background}
+
+Lassa has two segments "L" and "S" from Chapter 16 of "Molecular Virology of Human Pathogenic Viruses" by Wang-Shick Ryu
+
+<<fig.width=8, fig.height=4>>=
+# Download and decompress file
+if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg")) {
+  url <- "https://ars.els-cdn.com/content/image/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg"
+  system("mkdir -p lassa")
+  system(paste("curl -L", url, "-o lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg"))
+}
+if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg")) {
+  url <- "https://ars.els-cdn.com/content/image/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg"
+  system("mkdir -p lassa")
+  system(paste("curl -L", url, "-o lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg"))
+}
+@
+
+\includegraphics[width=0.8\textwidth]{lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg}
+
+\includegraphics[width=0.8\textwidth]{lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg}
+
+\newpage
+
+\section*{Exploratory Graphics}
+
+<<fig.width=8, fig.height=4>>=
+# Download and decompress file
+if (!file.exists("lassa/metadata_all.tsv")) {
+  system("mkdir -p lassa")
+  segments <- c("all", "l", "s")
+  for (segment in segments) {
+    file_name <- paste0("metadata_", segment, ".tsv")
+    zst_file <- paste0(file_name, ".zst")
+    url <- paste0("https://data.nextstrain.org/files/workflows/lassa/", segment, "/metadata.tsv.zst")
+    system(paste0("curl -L ", url, " -o ", "lassa/", zst_file))
+    system(paste0("zstd -d lassa/", zst_file, " -o lassa/", file_name))
+  }
+}
+
+data <- readr::read_delim("lassa/metadata_all.tsv", delim="\t")
+data_L <- readr::read_delim("lassa/metadata_l.tsv", delim="\t")
+data_S <- readr::read_delim("lassa/metadata_s.tsv", delim="\t")
+
+Lnames <- data_L$accession
+Snames <- data_S$accession
+
+data <- data %>%
+  mutate(
+    segment = case_when( accession %in% Lnames ~ "L",
+                         accession %in% Snames ~ "S",
+                         TRUE ~ "")
+  )
+@
+
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot(
+  data=data,
+  fill="lineage"
+)
+@
+
+
+
+\newpage
+
+\section*{L segment Nextclade Dataset}
+
+\noindent
+\textbf{Missing Data}
+
+<<echo=TRUE, eval=FALSE>>=
+--scoreBias 300                # First 300 not penalized
+--missingDataThreshold 3000    # Top threshold, scale the next set of missing data from 0 to 100
+@
+
+<<fig.width=4, fig.height=2>>=
+GPC_NEXTCLADE='~/Desktop/NEW/add-robust-gpc-nextclade-tree/ingest/results/l/nextclade.tsv'
+
+data <- readr::read_delim(GPC_NEXTCLADE, delim="\t")
+
+# names(data)
+
+data %>%
+  ggplot(. , aes(x=clade, y=totalMissing)) +
+  geom_violin() +
+  geom_boxplot(width=0.5) +
+  theme_bw()
+@
+
+\noindent
+\textbf{Mixed Sites (M)}
+
+<<echo=TRUE, eval=FALSE>>=
+--mixedSitesThreshold 10 # More than this number of mixed sites results in a "bad" score
+@
+
+<<fig.width=4, fig.height=1.5>>=
+data %>%
+  ggplot(. , aes(x=clade, y=totalNonACGTNs)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalNonACGTNs", y="")
+@
+
+
+\newpage
+\noindent
+\textbf{Private Mutations}
+
+<<echo=TRUE, eval=FALSE>>=
+    "privateMutations": {
+      "enabled": true,
+      "typical": 8,
+      "cutoff": 24,
+      "weightLabeledSubstitutions": 4,
+      "weightReversionSubstitutions": 6,
+      "weightUnlabeledSubstitutions": 1
+    },
+@
+
+<<fig.width=8, fig.height=3.5>>=
+a_plot <- data %>%
+  ggplot(. , aes(x=clade, y=privateNucMutations.totalLabeledSubstitutions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="privateNucMutations.totalLabeledSubstitutions", y="")
+
+b_plot <- data %>%
+  ggplot(. , aes(x=clade, y=privateNucMutations.totalUnlabeledSubstitutions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="privateNucMutations.totalUnlabeledSubstitutions", y="")
+
+c_plot <- data %>%
+  ggplot(. , aes(x=clade, y=privateNucMutations.totalReversionSubstitutions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="privateNucMutations.totalReversionSubstitutions", y="")
+
+d_plot <- data %>%
+  ggplot(. , aes(x=clade, y=privateNucMutations.totalPrivateSubstitutions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="privateNucMutations.totalPrivateSubstitutions", y="")
+
+cowplot::plot_grid(a_plot, b_plot, c_plot, d_plot, ncol=2)
+@
+
+\noindent
+\textbf{Mutation clusters}
+
+<<eval=FALSE, echo=TRUE>>=
+    "snpClusters": {
+      "enabled": true,
+      "windowSize": 100,
+      "clusterCutOff": 6,
+      "scoreWeight": 50
+    },
+@
+
+<<fig.width=8, fig.height=3.5>>=
+a_plot <- data %>%
+  ggplot(. , aes(x=clade, y=totalSubstitutions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalSubstitutions", y="")
+b_plot <- data %>%
+  ggplot(. , aes(x=clade, y=totalAminoacidSubstitutions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalAminoacidSubstitutions", y="")
+c_plot <- data %>%
+  ggplot(. , aes(x=clade, y=totalAminoacidInsertions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalAminoacidInsertions", y="")
+d_plot <- data %>%
+  ggplot(. , aes(x=clade, y=totalAminoacidDeletions)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalAminoacidDeletions", y="")
+cowplot::plot_grid(a_plot, b_plot, c_plot, d_plot, ncol=2)
+@
+
+
+\newpage
+\noindent
+\textbf{Stop Codons}
+
+<<eval=FALSE,echo=TRUE>>=
+"stopCodons": {
+      "enabled": true,
+      "ignoredStopCodons": [
+        {
+          "geneName": "ORF8",
+          "codon": 26
+        },
+        {
+          "geneName": "ORF8",
+          "codon": 67
+        }
+      ]
+}
+@
+
+<<fig.width=8, fig.height=2>>=
+data %>%
+  ggplot(. , aes(x=clade, y=qc.stopCodons.totalStopCodons)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="qc.stopCodons.totalStopCodons", y="")
+@
+
+
+\noindent
+\textbf{Frameshifts}
+
+<<eval=FALSE,echo=TRUE>>=
+    "frameShifts": {
+      "enabled": true,
+      "ignoredFrameShifts": [
+        {
+          "geneName": "ORF3a",
+          "codonRange": {
+            "begin": 256,
+            "end": 276
+          }
+        },
+        {
+          "geneName": "ORF3a",
+          "codonRange": {
+            "begin": 258,
+            "end": 276
+          }
+        }
+      ]
+    },
+@
+
+<<fig.width=8, fig.height=2>>=
+data %>%
+  ggplot(. , aes(x=clade, y=totalFrameShifts)) +
+  geom_violin() +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title="totalFrameShifts", y="")
+@
+
+
+
+
+
+\end{document}
