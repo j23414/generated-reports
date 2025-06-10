@@ -40,27 +40,6 @@ source("shared_functions.R")
 
 \section*{Background}
 
-Lassa has two segments "L" and "S" from Chapter 16 of "Molecular Virology of Human Pathogenic Viruses" by Wang-Shick Ryu
-
-<<fig.width=8, fig.height=4>>=
-# Download and decompress file
-if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg")) {
-  url <- "https://ars.els-cdn.com/content/image/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg"
-  system("mkdir -p lassa")
-  system(paste("curl -L", url, "-o lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg"))
-}
-if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg")) {
-  url <- "https://ars.els-cdn.com/content/image/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg"
-  system("mkdir -p lassa")
-  system(paste("curl -L", url, "-o lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg"))
-}
-@
-
-\includegraphics[width=0.8\textwidth]{lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg}
-
-\includegraphics[width=0.8\textwidth]{lassa/3-s2.0-B9780128008386000163-f16-10-9780128008386.jpg}
-
-\newpage
 
 \section*{Exploratory Graphics}
 
@@ -68,7 +47,7 @@ if (!file.exists("lassa/3-s2.0-B9780128008386000163-f16-09-9780128008386.jpg")) 
 # Download and decompress file
 if (!file.exists("lassa/metadata_all.tsv")) {
   system("mkdir -p lassa")
-  segments <- c("all", "l", "s")
+  segments <- c("all")
   for (segment in segments) {
     file_name <- paste0("metadata_", segment, ".tsv")
     zst_file <- paste0(file_name, ".zst")
@@ -79,32 +58,147 @@ if (!file.exists("lassa/metadata_all.tsv")) {
 }
 
 data <- readr::read_delim("lassa/metadata_all.tsv", delim="\t")
-data_L <- readr::read_delim("lassa/metadata_l.tsv", delim="\t")
-data_S <- readr::read_delim("lassa/metadata_s.tsv", delim="\t")
-
-Lnames <- data_L$accession
-Snames <- data_S$accession
-
-data <- data %>%
-  mutate(
-    segment = case_when( accession %in% Lnames ~ "L",
-                         accession %in% Snames ~ "S",
-                         TRUE ~ "")
-  )
 @
 
-<<fig.width=8, fig.height=4>>=
+
+<<fig.width=8, fig.height=2.5>>=
+# Add a second set of min-length filters for S segment
+s_length <- 3400
+perc_length <- c(1.0, 0.90, 0.8, 0.75, 0.70)*s_length
+binwidth=100
+percentage_y = 500
+
+# Pass in the min-length filters for L segment
+diagnostic_length_plot(
+  data=data,
+  approx_length = 7200,
+  binwidth = binwidth,
+  percentage_y = percentage_y
+) +
+  ggplot2::geom_vline(xintercept = perc_length, linetype = "dashed", color = "red") +
+    ggplot2::annotate("text",
+             x = perc_length + binwidth*1.5,
+             y = rep(percentage_y, 5),
+             label = paste0(round(perc_length), " (", c(100, 90, 80, 75, 70), "%)"),
+             hjust = -0.1,
+             angle = -90,
+             size = 3,
+             color = "darkgreen"
+    )
+@
+
+<<fig.width=8, fig.height=3>>=
+max_length <- max(data$length)
+binwidth <- 100
+
+data %>%
+  ggplot(aes(x = length)) +
+  geom_histogram(binwidth = binwidth, fill = "skyblue", color = "black") +
+  theme_bw() +
+  scale_x_continuous(
+    breaks = c(seq(0, max_length, by = 1000), max_length),
+    limits = c(0, max_length + 1)
+  ) +
+  labs(
+    x = paste("Sequence lengths (binwidth=", binwidth,")", sep=""),
+    y = "Count",
+    title = paste("Sequence lengths (all data = ",nrow(data),")", sep="")
+  ) +
+  facet_grid(rows = vars(segment))
+
+nonseg <- data %>% subset(segment=="")
+@
+
+<<fig.width=8, fig.height=3>>=
 diagnostic_time_fill_plot(
   data=data,
   fill="lineage"
 )
 @
 
-
-
 \newpage
 
 \section*{L segment Nextclade Dataset}
+
+<<fig.width=4, fig.height=2>>=
+GPC_NEXTCLADE='~/Desktop/NEW/add-robust-gpc-nextclade-tree/ingest/results/l/nextclade.tsv'
+
+data <- readr::read_delim(GPC_NEXTCLADE, delim="\t")
+@
+
+
+\section*{Alignment check}
+
+<<fig.width=8, fig.height=2>>=
+
+# Expand deletions
+expanded_deletions <- data %>%
+  select(., seqName, deletions) %>%
+  subset(., !is.na(deletions)) %>%
+  separate_longer_delim(., cols = deletions, delim=",") %>%
+  mutate(deletions = map(deletions, function(x) {
+    if (str_detect(x, "-")) {
+      range <- as.numeric(str_split(x, "-", simplify = TRUE))
+      return(as.character(seq(range[1], range[2])))
+    } else {
+      return(x)
+    }
+  })) %>%
+  unnest(deletions) %>%
+  mutate(
+    deletions=as.numeric(deletions)
+  )
+
+expanded_deletions %>%
+  ggplot(., aes(x=deletions)) +
+  geom_histogram(binwidth = 10) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  labs(title="Frequency of Deletions along the genome")
+@
+
+<<fig.width=8, fig.height=2>>=
+
+# Expand deletions
+expanded_insertions <- data %>%
+  select(., seqName, insertions) %>%
+  subset(., !is.na(insertions)) %>%
+  separate_longer_delim(., cols = insertions, delim=",") %>%
+  mutate(
+    insertions = sub(":.*", "", insertions),
+    insertions = as.numeric(insertions)
+  )
+
+expanded_insertions %>%
+  ggplot(., aes(x=insertions)) +
+  geom_histogram(binwidth = 10) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  labs(title="Frequency of insertions along the genome")
+@
+
+
+<<fig.width=8, fig.height=2>>=
+# Expand deletions
+expanded_frameshifts <- data %>%
+  select(., frameShifts) %>%
+  subset(., !is.na(frameShifts)) %>%
+  separate_longer_delim(., cols = frameShifts, delim=",") %>%
+  group_by(frameShifts) %>%
+  summarise(
+    n=n()
+  ) %>%
+  arrange(., desc(n) )
+
+kable(head(expanded_frameshifts, n=10), caption = "Top Frameshifts") %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+@
 
 \noindent
 \textbf{Missing Data}
@@ -115,18 +209,13 @@ diagnostic_time_fill_plot(
 @
 
 <<fig.width=4, fig.height=2>>=
-GPC_NEXTCLADE='~/Desktop/NEW/add-robust-gpc-nextclade-tree/ingest/results/l/nextclade.tsv'
-
-data <- readr::read_delim(GPC_NEXTCLADE, delim="\t")
-
-# names(data)
-
 data %>%
   ggplot(. , aes(x=clade, y=totalMissing)) +
   geom_violin() +
   geom_boxplot(width=0.5) +
   theme_bw()
 @
+
 
 \noindent
 \textbf{Mixed Sites (M)}

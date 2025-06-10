@@ -142,6 +142,86 @@ cowplot::plot_grid(sh_plot, genome_plot, ncol=2)
 
 \section*{SH gene Nextclade Dataset}
 
+<<fig.width=4, fig.height=2>>=
+SH_NEXTCLADE='~/Desktop/debug/fixup-config-and-logs/ingest/results/sh/nextclade.tsv'
+
+data <- readr::read_delim(SH_NEXTCLADE, delim="\t")
+@
+
+
+\section*{Alignment check}
+
+<<fig.width=8, fig.height=2>>=
+
+# Expand deletions
+expanded_deletions <- data %>%
+  select(., seqName, deletions) %>%
+  subset(., !is.na(deletions)) %>%
+  separate_longer_delim(., cols = deletions, delim=",") %>%
+  mutate(deletions = map(deletions, function(x) {
+    if (str_detect(x, "-")) {
+      range <- as.numeric(str_split(x, "-", simplify = TRUE))
+      return(as.character(seq(range[1], range[2])))
+    } else {
+      return(x)
+    }
+  })) %>%
+  unnest(deletions) %>%
+  mutate(
+    deletions=as.numeric(deletions)
+  )
+
+expanded_deletions %>%
+  ggplot(., aes(x=deletions)) +
+  geom_histogram(binwidth = 10) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  labs(title="Frequency of Deletions along the genome")
+@
+
+<<fig.width=8, fig.height=2>>=
+
+# Expand deletions
+expanded_insertions <- data %>%
+  select(., seqName, insertions) %>%
+  subset(., !is.na(insertions)) %>%
+  separate_longer_delim(., cols = insertions, delim=",") %>%
+  mutate(
+    insertions = sub(":.*", "", insertions),
+    insertions = as.numeric(insertions)
+  )
+
+expanded_insertions %>%
+  ggplot(., aes(x=insertions)) +
+  geom_histogram(binwidth = 10) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  labs(title="Frequency of insertions along the genome")
+@
+
+
+<<fig.width=8, fig.height=2>>=
+# Expand deletions
+expanded_frameshifts <- data %>%
+  select(., frameShifts) %>%
+  subset(., !is.na(frameShifts)) %>%
+  separate_longer_delim(., cols = frameShifts, delim=",") %>%
+  group_by(frameShifts) %>%
+  summarise(
+    n=n()
+  ) %>%
+  arrange(., desc(n) )
+
+kable(head(expanded_frameshifts, n=10), caption = "Top Frameshifts") %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+@
+
 \noindent
 \textbf{Missing Data}
 
@@ -151,12 +231,6 @@ cowplot::plot_grid(sh_plot, genome_plot, ncol=2)
 @
 
 <<fig.width=4, fig.height=2>>=
-SH_NEXTCLADE='~/Desktop/debug/fixup-config-and-logs/ingest/results/sh/nextclade.tsv'
-
-data <- readr::read_delim(SH_NEXTCLADE, delim="\t")
-
-# names(data)
-
 data %>%
   ggplot(. , aes(x=clade, y=totalMissing)) +
   geom_violin() +
@@ -342,6 +416,86 @@ data %>%
 \newpage
 
 \section*{Genome Nextclade Dataset}
+
+<<fig.width=4, fig.height=2>>=
+SH_NEXTCLADE='~/Desktop/debug/fixup-config-and-logs/ingest/results/genome/nextclade.tsv'
+
+data <- readr::read_delim(SH_NEXTCLADE, delim="\t")
+@
+
+
+\section*{Alignment check}
+
+<<fig.width=8, fig.height=2>>=
+
+# Expand deletions
+expanded_deletions <- data %>%
+  select(., seqName, deletions) %>%
+  subset(., !is.na(deletions)) %>%
+  separate_longer_delim(., cols = deletions, delim=",") %>%
+  mutate(deletions = map(deletions, function(x) {
+    if (str_detect(x, "-")) {
+      range <- as.numeric(str_split(x, "-", simplify = TRUE))
+      return(as.character(seq(range[1], range[2])))
+    } else {
+      return(x)
+    }
+  })) %>%
+  unnest(deletions) %>%
+  mutate(
+    deletions=as.numeric(deletions)
+  )
+
+expanded_deletions %>%
+  ggplot(., aes(x=deletions)) +
+  geom_histogram(binwidth = 10) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  labs(title="Frequency of Deletions along the genome")
+@
+
+<<fig.width=8, fig.height=2>>=
+
+# Expand deletions
+expanded_insertions <- data %>%
+  select(., seqName, insertions) %>%
+  subset(., !is.na(insertions)) %>%
+  separate_longer_delim(., cols = insertions, delim=",") %>%
+  mutate(
+    insertions = sub(":.*", "", insertions),
+    insertions = as.numeric(insertions)
+  )
+
+expanded_insertions %>%
+  ggplot(., aes(x=insertions)) +
+  geom_histogram(binwidth = 10) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  labs(title="Frequency of insertions along the genome")
+@
+
+
+<<fig.width=8, fig.height=2>>=
+# Expand deletions
+expanded_frameshifts <- data %>%
+  select(., frameShifts) %>%
+  subset(., !is.na(frameShifts)) %>%
+  separate_longer_delim(., cols = frameShifts, delim=",") %>%
+  group_by(frameShifts) %>%
+  summarise(
+    n=n()
+  ) %>%
+  arrange(., desc(n) )
+
+kable(head(expanded_frameshifts, n=10), caption = "Top Frameshifts") %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped")
+    )
+@
 
 \noindent
 \textbf{Missing Data}
