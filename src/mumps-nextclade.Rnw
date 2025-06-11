@@ -16,6 +16,7 @@
 \usepackage{threeparttablex}
 \usepackage[normalem]{ulem}
 \usepackage{makecell}
+\usepackage{hyperref}
 
 \usepackage{multicol}
 \usepackage{graphicx}
@@ -151,56 +152,20 @@ data <- readr::read_delim(SH_NEXTCLADE, delim="\t")
 
 \section*{Alignment check}
 
+\href{https://clades.nextstrain.org?dataset-url=https://github.com/nextstrain/mumps/tree/main/nextclade_data/sh&input-fasta=https://raw.githubusercontent.com/nextstrain/mumps/refs/heads/main/nextclade_data/sh/sequences.fasta}{Mumps/SH/example}
+
 <<fig.width=8, fig.height=2>>=
+result <- plot_deletions_along_genome(data, title="Frequency of deletions along SH")
 
-# Expand deletions
-expanded_deletions <- data %>%
-  select(., seqName, deletions) %>%
-  subset(., !is.na(deletions)) %>%
-  separate_longer_delim(., cols = deletions, delim=",") %>%
-  mutate(deletions = map(deletions, function(x) {
-    if (str_detect(x, "-")) {
-      range <- as.numeric(str_split(x, "-", simplify = TRUE))
-      return(as.character(seq(range[1], range[2])))
-    } else {
-      return(x)
-    }
-  })) %>%
-  unnest(deletions) %>%
-  mutate(
-    deletions=as.numeric(deletions)
-  )
-
-expanded_deletions %>%
-  ggplot(., aes(x=deletions)) +
-  geom_histogram(binwidth = 10) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  ) +
-  labs(title="Frequency of Deletions along the genome")
+# Show the plot
+result$plot
 @
 
 <<fig.width=8, fig.height=2>>=
+result <- plot_insertions_along_genome(data, title="Frequency of insertions along SH")
 
-# Expand deletions
-expanded_insertions <- data %>%
-  select(., seqName, insertions) %>%
-  subset(., !is.na(insertions)) %>%
-  separate_longer_delim(., cols = insertions, delim=",") %>%
-  mutate(
-    insertions = sub(":.*", "", insertions),
-    insertions = as.numeric(insertions)
-  )
-
-expanded_insertions %>%
-  ggplot(., aes(x=insertions)) +
-  geom_histogram(binwidth = 10) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  ) +
-  labs(title="Frequency of insertions along the genome")
+# Show the plot
+result$plot
 @
 
 
@@ -426,56 +391,20 @@ data <- readr::read_delim(SH_NEXTCLADE, delim="\t")
 
 \section*{Alignment check}
 
+\href{https://clades.nextstrain.org?dataset-url=https://github.com/nextstrain/mumps/tree/main/nextclade_data/genome&input-fasta=https://raw.githubusercontent.com/nextstrain/mumps/refs/heads/main/nextclade_data/genome/sequences.fasta}{Mumps/Genome/example}
+
 <<fig.width=8, fig.height=2>>=
+result <- plot_deletions_along_genome(data, title="Frequency of deletions along Genome", binwidth = 100)
 
-# Expand deletions
-expanded_deletions <- data %>%
-  select(., seqName, deletions) %>%
-  subset(., !is.na(deletions)) %>%
-  separate_longer_delim(., cols = deletions, delim=",") %>%
-  mutate(deletions = map(deletions, function(x) {
-    if (str_detect(x, "-")) {
-      range <- as.numeric(str_split(x, "-", simplify = TRUE))
-      return(as.character(seq(range[1], range[2])))
-    } else {
-      return(x)
-    }
-  })) %>%
-  unnest(deletions) %>%
-  mutate(
-    deletions=as.numeric(deletions)
-  )
-
-expanded_deletions %>%
-  ggplot(., aes(x=deletions)) +
-  geom_histogram(binwidth = 10) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  ) +
-  labs(title="Frequency of Deletions along the genome")
+# Show the plot
+result$plot
 @
 
 <<fig.width=8, fig.height=2>>=
+result <- plot_insertions_along_genome(data, title="Frequency of insertions along Genome", binwidth = 100)
 
-# Expand deletions
-expanded_insertions <- data %>%
-  select(., seqName, insertions) %>%
-  subset(., !is.na(insertions)) %>%
-  separate_longer_delim(., cols = insertions, delim=",") %>%
-  mutate(
-    insertions = sub(":.*", "", insertions),
-    insertions = as.numeric(insertions)
-  )
-
-expanded_insertions %>%
-  ggplot(., aes(x=insertions)) +
-  geom_histogram(binwidth = 10) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  ) +
-  labs(title="Frequency of insertions along the genome")
+# Show the plot
+result$plot
 @
 
 

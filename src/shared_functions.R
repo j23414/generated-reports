@@ -278,3 +278,52 @@ latest_records_table <- function(data, last=5, date="date", other_fields="access
     )
 }
 
+#====== Nextclade diagnostic plots
+
+plot_deletions_along_genome <- function(data, id = seqName, deletions_col = deletions, binwidth=10, title="Frequency of deletions along the Genome") {
+  expanded_deletions <- data %>%
+    select({{ id }}, {{ deletions_col }}) %>%
+    filter(!is.na({{ deletions_col }})) %>%
+    separate_longer_delim(cols = {{ deletions_col }}, delim = ",") %>%
+    mutate({{ deletions_col }} := map({{ deletions_col }}, function(x) {
+      if (str_detect(x, "-")) {
+        range <- as.numeric(str_split(x, "-", simplify = TRUE))
+        return(as.character(seq(range[1], range[2])))
+      } else {
+        return(x)
+      }
+    })) %>%
+    unnest({{ deletions_col }}) %>%
+    mutate({{ deletions_col }} := as.numeric({{ deletions_col }}))
+  
+  p <- ggplot(expanded_deletions, aes(x = {{ deletions_col }})) +
+    geom_histogram(binwidth = binwidth) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+    labs(title = title)
+  
+  return(list(expanded = expanded_deletions, plot = p))
+}
+
+plot_insertions_along_genome <- function(data, id = seqName, insertions_col = insertions, binwidth = 10, title = "Frequency of insertions along the Genome") {
+  expanded_insertions <- data %>%
+    select({{ id }}, {{ insertions_col }}) %>%
+    filter(!is.na({{ insertions_col }})) %>%
+    separate_longer_delim(cols = {{ insertions_col }}, delim = ",") %>%
+    mutate(
+      {{ insertions_col }} := sub(":.*", "", {{ insertions_col }}),
+      {{ insertions_col }} := as.numeric({{ insertions_col }})
+    )
+  
+  p <- expanded_insertions %>%
+    ggplot(aes(x = {{ insertions_col }})) +
+    geom_histogram(binwidth = binwidth) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+    ) +
+    labs(title = title)
+  
+  return(list(inserted = expanded_insertions, plot = p))
+}
+
