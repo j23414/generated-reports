@@ -8,6 +8,7 @@ Notes roughly grouped by similarity
 * [Mumps](reports/mumps.pdf)
     * [Mumps Nextclade](reports/mumps-nextclade.pdf)
 * [Rubella](reports/rubella.pdf)
+    * [Rubella Nextclade](reports/rubella-nextclade.pdf)
 
 **Arboviruses**
 
