@@ -85,6 +85,51 @@ data %>%
 
 \newpage
 
+\section*{Nextclade compared with GenBank annotations:}
+
+<<fig.width=4, fig.height=4>>=
+# Pivot Table comparing MuV_genotype and MuV_genotype_nextclade columns
+pivot <- data %>%
+  count(genbank_genotype, clade) %>%
+  complete(genbank_genotype, clade, fill = list(n = 0)) %>%
+  mutate(
+    log_n = ifelse(n > 0, log10(n), NA),
+    genbank_genotype = case_when(is.na(genbank_genotype) ~ "NA",
+                             TRUE ~ genbank_genotype),
+    genbank_genotype = fct_rev(factor(genbank_genotype))
+  )
+
+# Plot
+ggplot(pivot, aes(x = clade, y = genbank_genotype, fill = log_n)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = ifelse(n > 0, as.character(n), "")), color = "black", size = 3) +
+  scale_fill_gradient(
+    low = "white", high = "orange",
+    na.value = "white"
+  ) +
+  scale_y_discrete(name = "Original Genotype from GenBank") +
+  scale_x_discrete(name = "Nextclade Genotype results", position = "top") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0),
+  )
+
+# 
+# # Pivot Table comparing MuV_genotype and MuV_genotype_nextclade columns
+# pivot <- data %>%
+#   count(MuV_genotype, MuV_genotype_nextclade_genome) %>%
+#   complete(MuV_genotype, MuV_genotype_nextclade_genome, fill = list(n = 0)) %>%
+#   mutate(
+#     log_n = ifelse(n > 0, log10(n), NA),
+#     MuV_genotype = case_when(is.na(MuV_genotype) ~ "NA",
+#                              TRUE ~ MuV_genotype),
+#     MuV_genotype = fct_rev(factor(MuV_genotype))
+#   )
+@
+
+\newpage
+
 <<>>=
 NEXTCLADE='~/github/nextstrain/rubella-branches/more-rubella-polish-23/ingest/results/nextclade.tsv'
 
