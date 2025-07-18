@@ -1,0 +1,104 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{hyperref}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Norovirus notes: Nextclade}
+\rhead{last update: \today}
+
+\begin{document}
+
+<<,echo=FALSE>>=
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+
+<<message=FALSE, warning=FALSE>>=
+source("shared_functions.R")
+@
+ 
+\section*{Background}
+
+
+\section*{Exploratory Graphics}
+
+<<fig.width=8, fig.height=4>>=
+nextclade_path="~/github/nextstrain/norovirus-branches/gene-coverage/ingest/results/metadata.tsv"
+data <- readr::read_delim(paste0(nextclade_path), delim="\t")
+@
+
+
+<<fig.width=8, fig.height=2.5>>=
+diagnostic_length_plot(
+  data=data,
+  approx_length = 7500,
+  binwidth = 100
+)
+@
+
+<<fig.width=8, fig.height=4>>=
+cdata <- data %>%
+  subset(., !is.na(date)) %>%
+  subset(., date !="XXXX-XX-XX") %>%
+  mutate(
+    date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+    col_year = substr(date, 1, 4),
+    col_mon = substr(date, 6,7),
+    col_day = substr(date, 9,10),
+    complete = coverage > 0.8, 
+    min_length = length > 6000, 
+  )
+
+diagnostic_time_fill_plot(
+  cdata,
+  margin_l=0.5,
+  fill="complete",
+  title="Full genome coverage > 80%"
+  )
+
+long_data = cdata %>%
+  pivot_longer(., 
+               cols = c("coverage","3CLpro_coverage","NTPase_coverage","p22_coverage","p48_coverage","RdRp_coverage","VP1_coverage","VP2_coverage","VPg_coverage"), 
+               names_to="gene",
+               values_to = "coverage") %>%
+  mutate(
+    gene = gsub("_coverage", "", gene),
+    gene = gsub("coverage", "genome", gene)
+  )
+
+long_data %>%
+  ggplot(., aes(x=gene, y=coverage)) +
+  geom_violin() +
+  theme_bw() +
+  facet_grid(min_length~.) +
+  theme(
+    axis.text.x = element_text(angle=45, vjust=1, hjust=1),
+  )+
+  labs(
+    title=paste("Complete? Average coverage facetted by full genome or not"),
+    x="gene", y="coverage value from Nextclade"
+  ) 
+@
+
+\end{document}
