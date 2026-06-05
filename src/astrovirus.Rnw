@@ -1,0 +1,133 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.5in,top=1in,bottom=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+%\usepackage{threeparttable}
+%\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+%\usepackage{makecell}
+
+\usepackage{multicol}
+\usepackage{graphicx}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Astrovirus notes}
+\rhead{last update: \today}
+
+\begin{document}
+%\SweaveOpts{concordance=TRUE}
+
+<<echo=FALSE>>=
+library(knitr)
+#opts_chunk$set(fig.width=6,fig.height=3.5,size="footnotesize",fig.align='center',cache=FALSE,echo=TRUE)
+opts_chunk$set(fig.width = 6, fig.height = 3.5, size = "footnotesize", fig.align = "center", cache = FALSE, echo = FALSE, warning=FALSE, message=FALSE)
+@
+
+<<message=FALSE, warning=FALSE>>=
+library(tidyverse)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(cowplot)
+@
+
+<<message=FALSE, warning=FALSE>>=
+source("shared_functions.R")
+@
+
+
+\section*{Exploratory Graphics}
+
+<<fig.width=8, fig.height=4>>=
+data <- readr::read_delim("astrovirus/metadata.tsv", delim="\t")
+@
+
+\subsection*{What is the genome length of astrovirus?}
+
+The astrovirus genome is approximately 6 to 8kb in length.
+
+<<fig.width=8, fig.height=3>>=
+perc_length <- c(7000, 400, 1508, 2385)
+diagnostic_length_plot(
+  data=data,
+  approx_length = 7000,
+  binwidth = 20,
+  percentage_y = 1000
+) +
+  ggplot2::geom_vline(xintercept = 7000, linetype = "dashed", color = "red") +
+  ggplot2::geom_vline(xintercept = 326, linetype = "dashed", color = "blue") +
+  ggplot2::geom_vline(xintercept = 348, linetype = "dashed", color = "green") +
+  # ORF1b length
+  ggplot2::geom_vline(xintercept = 1508, linetype = "dashed", color = "pink") +
+  # ORF2 length
+  ggplot2::geom_vline(xintercept = 2385, linetype = "dashed", color = "purple") +
+  ggplot2::annotate("text", 
+    x = perc_length + 20*1.5, 
+    y = c(1500, 1500,1250, 1050),
+    label = c("7000 WGS", "326 RdRp or 348 ORF2 fragment", "1508 ORF1b", "2385 ORF2"),
+    hjust = -0.1,
+    angle = 0,
+    size = 3,
+    color = c("red", "blue", "pink", "purple")
+    )
+@
+
+Of the recent samples, are sequences longer than 4000nt?
+
+\begin{itemize}
+\item Red/false = may be the 326 RdRp or 348 ORF2 fragments or gene fragments
+\item Blue/True = may be WGS
+\end{itemize}
+
+<<fig.width=8, fig.height=4>>=
+cdata <- data %>%
+  subset(., !is.na(date)) %>%
+  subset(., date !="XXXX-XX-XX") %>%
+  mutate(
+    date_adjusted = lubridate::date(gsub("-XX", "-01", date)),
+    col_year = substr(date, 1, 4),
+    col_mon = substr(date, 6,7),
+    col_day = substr(date, 9,10),
+    small= length>4000
+  )
+
+diagnostic_time_fill_plot_month(
+  subset(cdata, col_year > 2019),
+  margin_l=0.5,
+  fill="small"
+  )
+@
+
+\newpage
+
+\subsection*{Who are the main submitters of sequence data?}
+
+
+<<fig.width=8, fig.height=6>>=
+top_x_author_table(
+  data=data,
+  top_x=25,
+  authors="authors"
+)
+@
+
+<<fig.width=8, fig.height=6>>=
+top_x_author_table(
+  data=data,
+  top_x=25,
+  authors="host"
+)
+@
+
+\end{document}
