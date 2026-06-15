@@ -83,14 +83,9 @@ diagnostic_length_plot(
     )
 @
 
-Of the recent samples, are sequences longer than 4000nt?
+What is the distribution by length and host type?
 
-\begin{itemize}
-\item Red/false = may be the 326 RdRp or 348 ORF2 fragments or gene fragments
-\item Blue/True = may be WGS
-\end{itemize}
-
-<<fig.width=8, fig.height=4>>=
+<<fig.width=8, fig.height=4, echo=TRUE>>=
 cdata <- data %>%
   subset(., !is.na(date)) %>%
   subset(., date !="XXXX-XX-XX") %>%
@@ -99,14 +94,63 @@ cdata <- data %>%
     col_year = substr(date, 1, 4),
     col_mon = substr(date, 6,7),
     col_day = substr(date, 9,10),
-    small= length>4000
+    len_category = case_when(length > 4000 ~ "e_WGS",
+                             length > 1700 ~ "c_ORF2",
+                             length > 1000 ~ "d_ORF1b",
+                             length > 300 ~ "b_fragment",
+                             TRUE ~ "a_tiny"),
+    host_category = case_when(host %in% c("Homo sapiens") ~ "Z_Human",
+                              is.na(host) ~ "NA",
+                              TRUE ~ "A_Other"),
+    host_length = paste0(host_category,"_",len_category)
   )
 
 diagnostic_time_fill_plot_month(
   subset(cdata, col_year > 2019),
   margin_l=0.5,
-  fill="small"
+  fill="len_category"
   )
+
+diagnostic_time_fill_plot_month(
+  subset(cdata, col_year > 2019),
+  margin_l=0.5,
+  fill="host_category"
+  )
+@
+
+Focused on human samples:
+
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot_month(
+  subset(subset(cdata, host_category=="Z_Human"), col_year > 2019),
+  margin_l=0.5,
+  fill="host_length"
+  )
+@
+
+Focused on "NA" samples:
+
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot_month(
+  subset(subset(cdata, host_category=="NA"), col_year > 2019),
+  margin_l=0.5,
+  fill="host_length"
+  )
+@
+
+Focused on "Other" samples:
+
+<<fig.width=8, fig.height=4>>=
+diagnostic_time_fill_plot_month(
+  subset(subset(cdata, host_category=="A_Other"), col_year > 2019),
+  margin_l=0.5,
+  fill="host_length"
+  )
+@
+
+
+<<fig.width=8, fig.height=4>>=
+
 @
 
 \newpage
