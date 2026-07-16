@@ -85,7 +85,7 @@ diagnostic_length_plot(
 
 What is the distribution by length and host type?
 
-<<fig.width=8, fig.height=4, echo=TRUE>>=
+<<fig.width=8, fig.height=3.5, echo=TRUE>>=
 cdata <- data %>%
   subset(., !is.na(date)) %>%
   subset(., date !="XXXX-XX-XX") %>%
@@ -107,15 +107,16 @@ cdata <- data %>%
 
 diagnostic_time_fill_plot_month(
   subset(cdata, col_year > 2019),
-  margin_l=0.5,
-  fill="len_category"
+  margin_l=0.5, fill="len_category"
   )
+
+cdata %>% filter(col_year > 2019) %>% group_by(len_category) %>% summarise(n = n(), .groups = "drop")
 
 diagnostic_time_fill_plot_month(
   subset(cdata, col_year > 2019),
-  margin_l=0.5,
-  fill="host_category"
+  margin_l=0.5, fill="host_category"
   )
+
 @
 
 Focused on human samples:
@@ -148,10 +149,6 @@ diagnostic_time_fill_plot_month(
   )
 @
 
-
-<<fig.width=8, fig.height=4>>=
-
-@
 
 \newpage
 
