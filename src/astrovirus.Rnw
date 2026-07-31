@@ -50,7 +50,7 @@ source("shared_functions.R")
 \section*{Exploratory Graphics}
 
 <<fig.width=8, fig.height=4>>=
-data <- readr::read_delim("astrovirus/metadata.tsv", delim="\t")
+data <- readr::read_delim("~/github/j23414/starrynight/ingest/results/metadata.tsv", delim="\t")
 @
 
 \subsection*{What is the genome length of astrovirus?}
@@ -170,5 +170,63 @@ top_x_author_table(
   authors="host"
 )
 @
+
+<<eval=FALSE>>=
+library(taxize)
+
+unique_hosts <- data %>%
+  subset(host!="NA") %>%
+  subset(!is.na(host)) %>%
+  select(host) %>%
+  unique(.)
+
+#db_download_ncbi()
+
+taxids <- taxize::get_uid(unique_hosts$host)
+unique_hosts$taxids = taxids
+
+#lineages <- classification(taxids, db = "ncbi")
+
+# Fetch the class name
+class_result <- tax_name(sci = taxids, get = "class", db = "ncbi")
+
+# View the result
+print(class_result$class)
+
+unique_hosts$scientific_name <- classification(
+  sci_id = unique_hosts$taxids,
+  get = "genus",
+  db = "ncbi"
+)
+
+unique_hosts$scientific_name <- sapply(
+  unique_hosts$taxids,
+  function(x) {
+    classification(x, db = "ncbi")[[1]]$name[1]
+  }
+)
+@
+
+\newpage
+
+\subsection*{What is the host/composition in each cluster?}
+
+<<>>=
+host_table <- data %>%
+  count(major_cluster, host, name = "n") %>%
+  group_by(major_cluster) %>%
+  arrange(desc(n), host) %>%
+  summarise(
+    cluster_size = sum(n),
+    hosts = paste(host, collapse = ", "),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(cluster_size))
+
+write_delim(host_table, "cluster_host_table.tsv", delim="\t")
+
+host_table %>% subset(!is.na(major_cluster) & cluster_size>2) %>% kable
+@
+
 
 \end{document}
