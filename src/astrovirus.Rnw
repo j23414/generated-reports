@@ -211,22 +211,183 @@ unique_hosts$scientific_name <- sapply(
 
 \subsection*{What is the host/composition in each cluster?}
 
-<<>>=
+<<fig.width=8, fig.height=6>>=
 host_table <- data %>%
   count(major_cluster, host, name = "n") %>%
   group_by(major_cluster) %>%
   arrange(desc(n), host) %>%
   summarise(
     cluster_size = sum(n),
-    hosts = paste(host, collapse = ", "),
+    hosts = paste(host, "(",n,")", collapse = ", ", sep=""),
     .groups = "drop"
   ) %>%
   arrange(desc(cluster_size))
 
+temp<-subset(data, !is.na(major_cluster))
+
 write_delim(host_table, "cluster_host_table.tsv", delim="\t")
 
-host_table %>% subset(!is.na(major_cluster) & cluster_size>2) %>% kable
-@
+host_table %>%
+  subset(!is.na(major_cluster) & cluster_size>2) %>%
+  kable
 
+# Roughly get host common names for samples in major clusters
+plot_data <- data %>%
+  subset(!is.na(major_cluster)) %>%
+  mutate(
+    host=case_when(host=="Homo sapiens" ~ "humans",
+                   host=="Sus scrofa" ~ "pigs",
+                   host=="Sus scrofa domesticus" ~ "pigs",
+                   host=="Anatidae" ~ "waterfowl", # ducks, swans
+                   host=="Anser anser" ~ "waterfowl", #goose
+                   host=="Anser" ~ "waterfowl", #goose
+                   host=="Anser cygnoides" ~ "waterfowl",
+                   host=="Anser sp." ~ "waterfowl",
+                   host=="Anas platyrhynchos" ~ "waterfowl",
+                   host=="Cairina moschata" ~ "waterfowl",
+                   host=="Gallus gallus" ~ "chicken",
+                   host=="Meleagris gallopavo" ~ "turkey",
+                   host=="Capreolus capreolus"~"wild bird",
+                   host=="Columba livia"~"wild bird",
+                   host=="Columbidae"~"wild bird",
+                   host=="Spilopelia chinensis"~"wild bird",
+                   host=="Zalophus californianus" ~ "sea lion",
+                   host=="Bos taurus" ~ "cattle",
+                   host=="Bovidae"~"cattle",
+                   host=="Bos grunniens"~"cattle",
+                   host=="Bubalus bubalis"~"cattle",
+                   host=="Camelus dromedarius"~"camel",
+                   host=="Camelus bactrianus"~"camel",
+                   host=="Capra hircus"~"goat",
+                   host=="Budorcas tibetana"~"goat",
+                   host=="Ovis aries"~"sheep",
+                   host=="Capreolus capreolus"~"deer",
+                   host=="Rattus norvegicus" ~ "rat",
+                   host=="Rattus andamanesis" ~ "rat",
+                   host=="Mus musculus" ~ "mouse",
+                   host=="Hystrix brachyura" ~ "rat",
+                   host=="Rattus andamanensis" ~ "rat",
+                   host=="Neogale vison"~"mink",
+                   host=="Mustela lutreola"~"mink",
+                   host=="Marmota himalayana"~"squirrel",
+                   host=="Oryctolagus cuniculus"~"rabbit",
+                   host=="Canis lupis familiaris" ~ "dog",
+                   host=="Canis lupus familiaris" ~ "dog",
+                   host=="Canis lupus" ~ "dog",
+                   host=="Nyctereutues procyonoides" ~ "dog",
+                   host=="Nyctereutes procyonoides" ~ "dog",
+                   host=="Felis catus" ~ "cat",
+                   host=="Panthera tigris altaica" ~ "cat",
+                   host=="Arnoglossus sp." ~ "fish",
+                   host=="Echelus uropterus" ~ "fish", # eel
+                   host=="Ptyas mucosa" ~ "snake",
+                   TRUE ~ host)
+  ) %>%
+  count(major_cluster, host, name = "n") %>%
+  group_by(major_cluster) %>%
+  mutate(cluster_size = sum(n)) %>%
+  ungroup() %>%
+  arrange(desc(cluster_size))
+
+# Set the order and color palette of hosts
+order_host <- c(
+  "humans",
+  "mouse",
+  "rat",
+  "squirrel",
+  "rabbit",
+  "cat",
+  "dog",
+  "mink",
+  "sea lion",
+  "pig",
+  "cattle",
+  "sheep",
+  "goat",
+  "camel",
+  "chicken",
+  "turkey",
+  "waterfowl",
+  "wild bird",
+  "snake",
+  "fish"
+  )
+
+host_colors <- c(
+  "humans"    = "#7F0000",
+  "mouse"     = "#A50F15",
+  "rat"       = "#CB181D",
+  "squirrel"  = "#EF3B2C",
+  "rabbit"    = "#FB6A4A",
+  "cat"       = "#FC9272",
+  "dog"       = "#FCBBA1",
+  "mink"      = "#FDD0A2",
+  "sea lion"  = "#FEE391",
+  "pig"       = "#FED976",
+  "cattle"    = "#FEB24C",
+  "sheep"     = "#FD8D3C",
+  "goat"      = "#F16913",
+  "camel"     = "#D94801",
+  "chicken"   = "#74C476",
+  "turkey"    = "#41AB5D",
+  "waterfowl" = "#238B45",
+  "wild bird" = "#005A32",
+  "snake"     = "#1C9099",
+  "fish"      = "#2171B5"
+)
+
+plot_data <- plot_data %>%
+  subset(., cluster_size > 2) %>%
+  mutate(
+    major_cluster = factor(major_cluster, levels = unique(major_cluster[order(-cluster_size)]))
+  )
+
+plot_data_filtered <- subset(plot_data, cluster_size >2)
+plot_data_filtered$host <- factor(plot_data_filtered$host, levels=order_host)
+
+# Plot amounts along top, and proportion below
+library(cowplot)
+
+p1 <- ggplot(plot_data_filtered, aes(x = major_cluster, y = n, fill=host)) +
+  geom_col() +
+  labs( x = NULL,y = "Number of samples") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position="none"
+  ) +
+  scale_fill_manual(values = host_colors)
+
+
+# Bottom: proportions, colored by host
+p2 <- ggplot(plot_data_filtered, aes(x = major_cluster, y = n, fill = host)) +
+  geom_col(position = "fill") +
+  labs(x = "Major cluster", y = "Proportion", fill = "Host") +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )  +
+  scale_fill_manual(values = host_colors)
+
+legend <- get_legend(p2)
+
+p2 <- p2 + theme(legend.position = "none")
+
+plots <- plot_grid(
+  p1, p2,
+  ncol = 1,
+  align = "v",
+  axis = "lr",
+  rel_heights = c(5, 4)
+)
+
+plot_grid(
+  plots, legend,
+  ncol = 2,
+  rel_widths = c(1, 0.15)
+)
+@
 
 \end{document}
