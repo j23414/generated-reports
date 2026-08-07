@@ -213,8 +213,8 @@ unique_hosts$scientific_name <- sapply(
 
 <<fig.width=8, fig.height=6>>=
 host_table <- data %>%
-  count(major_cluster, host, name = "n") %>%
-  group_by(major_cluster) %>%
+  count(major_cluster2, host, name = "n") %>%
+  group_by(major_cluster2) %>%
   arrange(desc(n), host) %>%
   summarise(
     cluster_size = sum(n),
@@ -223,17 +223,17 @@ host_table <- data %>%
   ) %>%
   arrange(desc(cluster_size))
 
-temp<-subset(data, !is.na(major_cluster))
+temp<-subset(data, !is.na(major_cluster2))
 
 write_delim(host_table, "cluster_host_table.tsv", delim="\t")
 
 host_table %>%
-  subset(!is.na(major_cluster) & cluster_size>2) %>%
+  subset(!is.na(major_cluster2) & cluster_size>2) %>%
   kable
 
 # Roughly get host common names for samples in major clusters
 plot_data <- data %>%
-  subset(!is.na(major_cluster)) %>%
+  subset(!is.na(major_cluster2)) %>%
   mutate(
     host=case_when(host=="Homo sapiens" ~ "humans",
                    host=="Sus scrofa" ~ "pigs",
@@ -283,8 +283,8 @@ plot_data <- data %>%
                    host=="Ptyas mucosa" ~ "snake",
                    TRUE ~ host)
   ) %>%
-  count(major_cluster, host, name = "n") %>%
-  group_by(major_cluster) %>%
+  count(major_cluster2, host, name = "n") %>%
+  group_by(major_cluster2) %>%
   mutate(cluster_size = sum(n)) %>%
   ungroup() %>%
   arrange(desc(cluster_size))
@@ -339,7 +339,7 @@ host_colors <- c(
 plot_data <- plot_data %>%
   subset(., cluster_size > 2) %>%
   mutate(
-    major_cluster = factor(major_cluster, levels = unique(major_cluster[order(-cluster_size)]))
+    major_cluster2 = factor(major_cluster2, levels = unique(major_cluster2[order(-cluster_size)]))
   )
 
 plot_data_filtered <- subset(plot_data, cluster_size >2)
@@ -348,7 +348,7 @@ plot_data_filtered$host <- factor(plot_data_filtered$host, levels=order_host)
 # Plot amounts along top, and proportion below
 library(cowplot)
 
-p1 <- ggplot(plot_data_filtered, aes(x = major_cluster, y = n, fill=host)) +
+p1 <- ggplot(plot_data_filtered, aes(x = major_cluster2, y = n, fill=host)) +
   geom_col() +
   labs( x = NULL,y = "Number of samples") +
   theme_minimal() +
@@ -361,7 +361,7 @@ p1 <- ggplot(plot_data_filtered, aes(x = major_cluster, y = n, fill=host)) +
 
 
 # Bottom: proportions, colored by host
-p2 <- ggplot(plot_data_filtered, aes(x = major_cluster, y = n, fill = host)) +
+p2 <- ggplot(plot_data_filtered, aes(x = major_cluster2, y = n, fill = host)) +
   geom_col(position = "fill") +
   labs(x = "Major cluster", y = "Proportion", fill = "Host") +
   scale_y_continuous(labels = scales::percent) +
