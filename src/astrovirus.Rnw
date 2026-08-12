@@ -310,11 +310,16 @@ plot_data <- data %>%
                    host=="Myotis laniger" ~ "bat",
                    host=="Paguma larvata" ~ "mink",
                    host=="Neodon fuscus" ~ "cat",
+                   is.na(host) ~ "Unknown",
                    TRUE ~ host)
   ) %>%
   count(major_cluster2, host, name = "n") %>%
   group_by(major_cluster2) %>%
-  mutate(cluster_size = sum(n)) %>%
+  mutate(
+    cluster_size = sum(n),
+    host_proportion = n / cluster_size,
+    host_percentage = 100 * n / cluster_size,
+    ) %>%
   ungroup() %>%
   arrange(desc(cluster_size))
 
@@ -349,6 +354,35 @@ host_colors <- c(
 
 order_host <- names(host_colors)
 
+highest_order_host <- c(
+  "Unknown",
+  "bat",
+  "squirrel",
+  "rabbit",
+  "fox",
+  "sea lion",
+  "red panda",
+  "camel",
+  "turkey",
+  "lizard",
+  "snake",
+  "fish",
+  "wild bird",
+  "mouse",
+  "rat",
+  "goat",
+  "sheep",
+  "mink",
+  "chicken",
+  "cat",
+  "cattle",
+  "dog",
+  "pig",
+  "humans",
+  "waterfowl"
+)
+
+
 plot_data <- plot_data %>%
   subset(., cluster_size > 2) %>%
   mutate(
@@ -356,7 +390,7 @@ plot_data <- plot_data %>%
   )
 
 plot_data_filtered <- subset(plot_data, cluster_size >2)
-plot_data_filtered$host <- factor(plot_data_filtered$host, levels=order_host)
+plot_data_filtered$host <- factor(plot_data_filtered$host, levels=highest_order_host)
 
 #unique(plot_data_filtered$host)
 
@@ -406,6 +440,101 @@ plot_grid(
   ncol = 1,
   rel_heights = c(1, 0.15)
   #rel_widths = c(1, 0.15)
+)
+@
+
+\section*{Request for a heatmap}
+
+<<fig.width=11, fig.height=6>>=
+# ggplot heatmap
+plot_data_filtered %>%
+subset(., cluster_size > 3) %>%
+  ggplot(., aes(x=major_cluster2, y=host, fill=host_percentage)) + geom_tile() +
+  scale_fill_gradient2(
+    low = "white",
+    mid = "#B7E4C7",
+    high = "#2D6A4F",
+    midpoint = median(plot_data_filtered$n, na.rm = TRUE)
+  ) +
+  geom_text(aes(label = n)) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5),
+  )
+@
+
+<<fig.width=11, fig.height=6>>=
+library(dplyr)
+library(tidyr)
+library(pheatmap)
+
+heatmap_data <- plot_data_filtered %>%
+  filter(cluster_size > 3) %>%
+  select(major_cluster2, host, host_percentage) %>%
+  pivot_wider(
+    names_from = major_cluster2,
+    values_from = host_percentage,
+    values_fill = 0
+  )
+
+heatmap_matrix <- heatmap_data %>%
+  column_to_rownames("host") %>%
+  as.matrix()
+
+number_data <- plot_data_filtered %>%
+  filter(cluster_size > 3) %>%
+  mutate(
+    host = ifelse(is.na(host), "Unknown", host)
+  ) %>%
+  select(major_cluster2, host, n) %>%
+  pivot_wider(
+    names_from = major_cluster2,
+    values_from = n,
+    values_fill = 0
+  )
+
+number_matrix <- number_data %>%
+  tibble::column_to_rownames("host") %>%
+  as.matrix()
+
+number_matrix <- ifelse(
+  number_matrix == 0,
+  "",
+  as.character(number_matrix)
+)
+
+pheatmap(
+  heatmap_matrix,
+  cluster_cols = FALSE,
+  cluster_rows = TRUE,
+  scale = "none",
+  color = colorRampPalette(c(
+  "#FFFFFF", # 0%
+  "#D9F0D3", # 25%
+  "#FFFFBF", # 50%
+  "#FEC44F", # 75%
+  "#F4A261"  # 100%
+  ))(100),
+  display_numbers = number_matrix,
+  number_format = "%.0f",
+  border_color = "grey90"
+)
+
+pheatmap(
+  heatmap_matrix,
+  cluster_cols = TRUE,
+  cluster_rows = TRUE,
+  scale = "none",
+  color = colorRampPalette(c(
+  "#FFFFFF", # 0%
+  "#D9F0D3", # 25%
+  "#FFFFBF", # 50%
+  "#FEC44F", # 75%
+  "#F4A261"  # 100%
+  ))(100),
+  display_numbers = number_matrix,
+  number_format = "%.0f",
+  border_color = "grey90"
 )
 @
 
